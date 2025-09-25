@@ -6,7 +6,7 @@
   <title>We Power On — Men's Walk & Talk Map</title>
   <style>
     :root{
-      --accent: rgb(251, 187, 61);
+      --accent: rgb(251,187,61);
       --text: #0A0A0A;
       --border: #DDD;
       --bg: #FFF;
@@ -15,8 +15,9 @@
       --radius: 10px;
       --ring: 3px solid rgba(0,0,0,.6);
       --ring-accent: 3px solid rgba(251,187,61,.8);
+      --map-ar: 1600/1100; /* exact aspect ratio of your image */
     }
-    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; margin:0; color:var(--text); background:var(--bg); }
+    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans"; margin:0; color:var(--text); background:var(--bg); }
     *{ box-sizing:border-box; }
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration:.001ms!important; transition-duration:.001ms!important; scroll-behavior:auto!important; }
@@ -26,8 +27,27 @@
     .page{ display:grid; grid-template-columns:340px 1fr; min-height:100dvh; }
     .sidebar{ padding:var(--top-gap) 20px 20px; max-height:100dvh; overflow:auto; }
     .map-stick{ position:sticky; top:0; height:calc(100dvh - var(--map-bottom-trim)); display:flex; align-items:flex-start; }
-    .map{ position:relative; height:100%; width:100%; display:flex; margin-left:-10px; overflow:hidden; overscroll-behavior:contain; border-left:1px solid var(--border); }
-    .map-img{ width:100%; height:auto; max-height:100%; object-fit:contain; display:block; }
+    .map-frame{ flex:1; display:flex; border-left:1px solid var(--border); margin-left:-10px; }
+    /* The magic: a fixed-aspect canvas that scales responsively */
+    .map-ratio{
+      position:relative;
+      aspect-ratio: var(--map-ar);
+      width:100%;
+      max-height:100%;
+      margin:auto;
+    }
+    /* Absolutely positioned canvas so children can use % coordinates */
+    .map-canvas{
+      position:absolute; inset:0;
+      overflow:hidden; overscroll-behavior:contain;
+      background:#fff;
+    }
+    .map-img{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit: fill; /* fills the exact aspect canvas; no letterboxing */
+      display:block;
+    }
 
     /* Header */
     .map-header h1{ margin:0 6px 8px 0; font-size:clamp(28px,5vw,42px); line-height:1.05; font-weight:800; }
@@ -51,12 +71,19 @@
     .walk-btn{ width:100%; text-align:left; background:transparent; border:0; padding:6px 0; font-size:14px; cursor:pointer; border-radius:6px; }
     .walk-btn:hover, .walk-btn:focus-visible{ color:var(--accent); outline:var(--ring); background:rgba(251,187,61,.08); padding-left:6px; }
 
-    /* Markers */
-    .marker{ position:absolute; height:44px; width:auto; transform:translate(-50%, -100%); z-index:1; opacity:0; transition:opacity .2s, transform .2s; cursor:pointer; }
-    .marker.visible{ opacity:1; transform:translate(-50%, -100%) scale(1.02); }
+    /* Markers positioned by % on the exact canvas */
+    .marker{
+      position:absolute;
+      height:44px; width:auto;
+      transform: translate(-50%, -100%);
+      z-index:2;
+      opacity:0; transition:opacity .2s, transform .2s;
+      cursor:pointer;
+    }
+    .marker.visible{ opacity:1; transform: translate(-50%, -100%) scale(1.02); }
     .marker:focus-visible{ outline:var(--ring-accent); border-radius:4px; }
 
-    /* Info box (map-relative positioning) */
+    /* Info box pinned to the same canvas */
     .info-box{
       position:absolute; background:#fff; border:1px solid #ccc; border-radius:var(--radius);
       padding:12px; max-width:260px; z-index:3; font-size:14px; box-shadow:0 2px 16px rgba(0,0,0,.18);
@@ -76,7 +103,7 @@
       .page{ display:block; min-height:auto; }
       .sidebar{ max-height:none; padding:16px; }
       .map-stick{ position:static; height:auto; margin-top:8px; }
-      .map{ margin-left:0; border-left:0; }
+      .map-frame{ margin-left:0; border-left:0; }
       .info-box{ left:10px !important; right:10px !important; max-width:unset; }
     }
     .visually-hidden{ position:absolute!important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
@@ -97,7 +124,7 @@
         <input type="search" id="walkSearch" placeholder="Search walks…" aria-label="Search walks"/>
       </div>
 
-      <!-- England -->
+      <!-- Regions (same as before) -->
       <section class="region" aria-labelledby="heading-england">
         <button class="region-toggle" id="heading-england" aria-expanded="true" aria-controls="list-england">
           England <span class="region-icon" aria-hidden="true">▼</span>
@@ -112,7 +139,6 @@
         </ul>
       </section>
 
-      <!-- Wales -->
       <section class="region" aria-labelledby="heading-wales">
         <button class="region-toggle" id="heading-wales" aria-expanded="true" aria-controls="list-wales">
           Wales <span class="region-icon" aria-hidden="true">▼</span>
@@ -127,7 +153,6 @@
         </ul>
       </section>
 
-      <!-- Scotland -->
       <section class="region" aria-labelledby="heading-scotland">
         <button class="region-toggle" id="heading-scotland" aria-expanded="true" aria-controls="list-scotland">
           Scotland <span class="region-icon" aria-hidden="true">▼</span>
@@ -142,7 +167,6 @@
         </ul>
       </section>
 
-      <!-- Northern Ireland -->
       <section class="region" aria-labelledby="heading-ni">
         <button class="region-toggle" id="heading-ni" aria-expanded="true" aria-controls="list-ni">
           Northern Ireland <span class="region-icon" aria-hidden="true">▼</span>
@@ -160,108 +184,112 @@
 
     <!-- Map -->
     <section class="map-stick" aria-label="UK map">
-      <div class="map">
-        <img
-          src="https://static.wixstatic.com/media/0115fe_de5d106d4b3b46579b02adc51d9131d4~mv2.webp"
-          alt="Map of the UK"
-          class="map-img"
-          decoding="async"
-          fetchpriority="high"
-          width="1600" height="1100"
-        />
+      <div class="map-frame">
+        <div class="map-ratio">
+          <div class="map-canvas" id="mapCanvas">
+            <img
+              src="https://static.wixstatic.com/media/0115fe_de5d106d4b3b46579b02adc51d9131d4~mv2.webp"
+              alt="Map of the UK"
+              class="map-img"
+              decoding="async"
+              fetchpriority="high"
+              width="1600" height="1100"
+            />
 
-        <!-- England -->
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-epsom" class="marker" alt="" style="top:77%; left:66%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-canterbury" class="marker" alt="" style="top:83%; left:79%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-birmingham" class="marker" alt="" style="top:72%; left:63%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-london" class="marker" alt="" style="top:84%; left:74%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-manchester" class="marker" alt="" style="top:62%; left:55%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-liverpool" class="marker" alt="" style="top:62%; left:52%;">
-        </a>
+            <!-- England -->
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-epsom" class="marker" alt="" style="top:77%; left:66%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-canterbury" class="marker" alt="" style="top:83%; left:79%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-birmingham" class="marker" alt="" style="top:72%; left:63%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-london" class="marker" alt="" style="top:84%; left:74%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-manchester" class="marker" alt="" style="top:62%; left:55%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-liverpool" class="marker" alt="" style="top:62%; left:52%;">
+            </a>
 
-        <!-- Wales -->
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-cardiff" class="marker" alt="" style="top:78%; left:50%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-swansea" class="marker" alt="" style="top:78%; left:46%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-bangor_wales" class="marker" alt="" style="top:58%; left:46%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-newport_wales" class="marker" alt="" style="top:77%; left:51%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-wrexham" class="marker" alt="" style="top:63%; left:49%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-aberystwyth" class="marker" alt="" style="top:69%; left:45%;">
-        </a>
+            <!-- Wales -->
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-cardiff" class="marker" alt="" style="top:78%; left:50%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-swansea" class="marker" alt="" style="top:78%; left:46%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-bangor_wales" class="marker" alt="" style="top:58%; left:46%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-newport_wales" class="marker" alt="" style="top:77%; left:51%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-wrexham" class="marker" alt="" style="top:63%; left:49%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-aberystwyth" class="marker" alt="" style="top:69%; left:45%;">
+            </a>
 
-        <!-- Scotland -->
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-edinburgh" class="marker" alt="" style="top:45%; left:67%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-glasgow" class="marker" alt="" style="top:46%; left:61%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-aberdeen_scot" class="marker" alt="" style="top:34%; left:70%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-dundee" class="marker" alt="" style="top:41%; left:68%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-inverness" class="marker" alt="" style="top:32%; left:60%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-stirling" class="marker" alt="" style="top:43%; left:62%;">
-        </a>
+            <!-- Scotland -->
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-edinburgh" class="marker" alt="" style="top:45%; left:67%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-glasgow" class="marker" alt="" style="top:46%; left:61%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-aberdeen_scot" class="marker" alt="" style="top:34%; left:70%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-dundee" class="marker" alt="" style="top:41%; left:68%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-inverness" class="marker" alt="" style="top:32%; left:60%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-stirling" class="marker" alt="" style="top:43%; left:62%;">
+            </a>
 
-        <!-- Northern Ireland (corrected) -->
-        <a href="https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-belfast" class="marker" alt="" style="top:47%; left:38%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-derry" class="marker" alt="" style="top:48%; left:34%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-lisburn" class="marker" alt="" style="top:50%; left:39%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-newry" class="marker" alt="" style="top:55%; left:40%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-armagh" class="marker" alt="" style="top:53%; left:38%;">
-        </a>
-        <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
-          <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-bangor_ni" class="marker" alt="" style="top:47%; left:41%;">
-        </a>
+            <!-- Northern Ireland -->
+            <a href="https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-belfast" class="marker" alt="" style="top:47%; left:38%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-derry" class="marker" alt="" style="top:48%; left:34%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-lisburn" class="marker" alt="" style="top:50%; left:39%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-newry" class="marker" alt="" style="top:55%; left:40%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-armagh" class="marker" alt="" style="top:53%; left:38%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-bangor_ni" class="marker" alt="" style="top:47%; left:41%;">
+            </a>
 
-        <div id="info-box" class="info-box" role="dialog" aria-live="polite" aria-modal="false"></div>
+            <!-- Popup -->
+            <div id="info-box" class="info-box" role="dialog" aria-live="polite" aria-modal="false"></div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
   <script>
-    /* Icons + content */
+    /* Content & icons */
     const ICON='https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp';
     const SITE_URL='https://www.wepoweron.co.uk';
     const INSTAGRAM_HANDLE='@we_power_on';
     const INSTAGRAM_URL='https://instagram.com/we_power_on';
-
     const ICON_SVG_GLOBE=`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>`;
     const ICON_SVG_INSTA=`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"></rect><circle cx="12" cy="12" r="4.5"></circle><circle cx="17.2" cy="6.8" r="1.2"></circle></svg>`;
     const ICON_SVG_PIN=`<svg class="icon-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c4.42 0 8 3.34 8 7.46 0 5.53-6.2 11.61-7.46 12.72a.74.74 0 0 1-1.08 0C10.2 21.07 4 15 4 9.46 4 5.34 7.58 2 12 2z"></path><circle class="hole" cx="12" cy="9" r="3"></circle></svg>`;
@@ -270,15 +298,6 @@
         <a class="link" href="${SITE_URL}" target="_blank" rel="noopener" aria-label="Website (opens in new tab)">${ICON_SVG_GLOBE}<span>wepoweron.co.uk</span></a>
         <a class="link" href="${INSTAGRAM_URL}" target="_blank" rel="noopener" aria-label="Instagram (opens in new tab)">${ICON_SVG_INSTA}<span>${INSTAGRAM_HANDLE}</span></a>
       </div>`;
-
-    function header(name, place){ return `
-      <div class="info-header">
-        <img src="${ICON}" class="walk-logo" alt="">
-        <div>
-          <div class="walk-name">${name}</div>
-          <div class="loc-line">${ICON_SVG_PIN}<span>${place}</span></div>
-        </div>
-      </div>`;}
 
     const walkData={
       epsom:{html:header('We Power On','Epsom, Surrey')+LINK_HTML},
@@ -306,14 +325,21 @@
       armagh:{html:header('Orchard Strides','Armagh')+LINK_HTML},
       bangor_ni:{html:header('Coastal Breeze Walk','Bangor (NI)')+LINK_HTML}
     };
+    function header(name, place){ return `
+      <div class="info-header">
+        <img src="${ICON}" class="walk-logo" alt="">
+        <div>
+          <div class="walk-name">${name}</div>
+          <div class="loc-line">${ICON_SVG_PIN}<span>${place}</span></div>
+        </div>
+      </div>`;}
 
-    /* State & timing */
+    /* State & refs */
     const infoBox=document.getElementById('info-box');
+    const canvas = document.getElementById('mapCanvas'); // the aspect-locked canvas
     const markerMap=new Map(Array.from(document.querySelectorAll('.marker')).map(el=>[el.id.replace('marker-',''),el]));
     let prevVisibleMarker=null, currentWalkId=null, hideTimeout=null, hoverLockUntil=0;
-    const HOVER_LOCK_MS=3000;
-    const HIDE_DELAY_MS=1200;       // ⬅ stays visible longer
-    const LEAVE_GRACE_MS=80;        // ⬅ tiny grace to cross the gap
+    const HOVER_LOCK_MS=3000, HIDE_DELAY_MS=1200, LEAVE_GRACE_MS=80;
 
     /* Region toggles */
     document.querySelectorAll('.region-toggle').forEach(btn=>{
@@ -365,21 +391,19 @@
       const id=btn.dataset.id;
       btn.addEventListener('click',()=>{ hoverLockUntil=Date.now()+HOVER_LOCK_MS; showWalk(id,{force:true}); });
       btn.addEventListener('mouseenter',()=>showWalk(id));
-      btn.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS)); // small grace
+      btn.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS));
     });
 
     /* Marker interactions */
     markerMap.forEach((marker,id)=>{
-      const anchor = marker.parentElement; // <a>
+      const anchor=marker.parentElement;
       anchor.addEventListener('mouseenter',()=>showWalk(id));
-      anchor.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS)); // small grace leaving the pin
+      anchor.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS));
       marker.addEventListener('focus',()=>showWalk(id,{force:true}));
       marker.addEventListener('blur',()=> delayedHide(HIDE_DELAY_MS));
-      // clicking the pin goes to the site (default <a> behavior), no JS needed
+      // clicking anchor opens target — default behavior
     });
 
-    // Keep the card open while the cursor is inside it,
-    // and only hide after a longer delay once it leaves.
     infoBox.addEventListener('mouseenter', cancelHide);
     infoBox.addEventListener('mouseleave', ()=> delayedHide(HIDE_DELAY_MS));
 
@@ -392,41 +416,32 @@
       infoBox.innerHTML=walkData[id]?.html||''; infoBox.style.display='block';
       if(marker) positionInfoBoxNearMarker(marker);
     }
+    function delayedHide(delay=HIDE_DELAY_MS){ cancelHide(); hideTimeout=setTimeout(hideWalk, delay); }
+    function cancelHide(){ if(hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
+    function hideWalk(){ if(prevVisibleMarker){ prevVisibleMarker.classList.remove('visible'); prevVisibleMarker=null; } infoBox.style.display='none'; currentWalkId=null; }
 
-    function delayedHide(delay=HIDE_DELAY_MS){
-      cancelHide();
-      hideTimeout=setTimeout(hideWalk, delay);
-    }
-    function cancelHide(){
-      if(hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; }
-    }
-    function hideWalk(){
-      if(prevVisibleMarker){ prevVisibleMarker.classList.remove('visible'); prevVisibleMarker=null; }
-      infoBox.style.display='none';
-      currentWalkId=null;
-    }
-
-    /* Map-relative positioning for the info box */
+    /* Position popup RELATIVE to the aspect-locked canvas */
     function positionInfoBoxNearMarker(markerEl){
-      const mapEl=document.querySelector('.map');
-      const mapRect=mapEl.getBoundingClientRect();
+      const canvasRect=canvas.getBoundingClientRect();
       const mr=markerEl.getBoundingClientRect();
-
       const prevDisplay=infoBox.style.display;
       infoBox.style.display='block';
-      const boxW=infoBox.offsetWidth||240;
-      const boxH=infoBox.offsetHeight||160;
+      const boxW=infoBox.offsetWidth||240, boxH=infoBox.offsetHeight||160;
 
-      let left = (mr.right - mapRect.left) + 12;                    // right of marker
-      let top  = (mr.top - mapRect.top) + (mr.height/2) - (boxH/2); // center vertically
+      // right of marker, vertically centered
+      let left = (mr.right - canvasRect.left) + 12;
+      let top  = (mr.top   - canvasRect.top)  + (mr.height/2) - (boxH/2);
 
-      const mapRight=mapRect.width;
-      if(left + boxW > mapRight - 8){ left = (mr.left - mapRect.left) - boxW - 12; }
+      // if not enough room on right, swap to left
+      if(left + boxW > canvasRect.width - 8){
+        left = (mr.left - canvasRect.left) - boxW - 12;
+      }
 
-      const minLeft = 8, maxLeft = mapRect.width - boxW - 8;
-      const minTop  = 8, maxTop  = mapRect.height - boxH - 8;
-      left = Math.max(minLeft, Math.min(left, maxLeft));
-      top  = Math.max(minTop,  Math.min(top,  maxTop));
+      // clamp within canvas bounds
+      const minLeft=8, maxLeft=canvasRect.width - boxW - 8;
+      const minTop =8, maxTop =canvasRect.height - boxH - 8;
+      left=Math.max(minLeft, Math.min(left, maxLeft));
+      top =Math.max(minTop,  Math.min(top,  maxTop));
 
       infoBox.style.left = left + 'px';
       infoBox.style.top  = top  + 'px';
@@ -448,7 +463,7 @@
     window.addEventListener('resize', scheduleReposition, {passive:true});
     window.addEventListener('scroll', scheduleReposition,  {passive:true});
 
-    /* Alphabetise towns in each region */
+    /* Alphabetise by town within each region */
     document.querySelectorAll('.walk-list').forEach(ul=>{
       const items=[...ul.querySelectorAll('.walk-item')];
       const key=el=>{
