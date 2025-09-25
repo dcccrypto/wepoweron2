@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>We Power On — UK Map (Custom, Responsive, Popups)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>We Power On Map — Proper, Responsive, With Cities & Popups</title>
 
-<!-- amCharts 5 (add your license key for commercial use if needed) -->
-<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-<script src="https://cdn.amcharts.com/lib/5/map.js"></script>
-<script src="https://cdn.amcharts.com/lib/5/geodata/ukHigh.js"></script>
-<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
-
+<!-- Intro Rust Base (H1 only) -->
 <style>
-  /* Display font for the H1 (your original) */
   @font-face{
     font-family:"Intro Rust Base";
     src:url("https://static.wixstatic.com/ufonts/0737e3_d7be359c419b4134a1683bddb51a5197/woff2/file.woff2") format("woff2");
@@ -20,174 +14,259 @@
   }
 
   :root{
-    /* Palette sampled from your map image */
-    --sea: #b8e0e2;
-    --scotland: #c75931;
-    --ni: #f2bc52;
-    --wales: #c96a43;
-    --south-west: #667652;
-    --north-west: #5d715e;
-    --yorks-humber: #d9683e;
-    --north-east: #f0c45b;
-    --west-midlands: #8b4c3a;
-    --east-midlands: #2f3d3e;
-    --east-england: #7a865b; /* Anglia */
-    --london: #30383a;
-    --south-east: #f0b15c;
-
-    --accent: #FBBB3D;
-    --panel: #fff;
-    --text: #0a0a0a;
-    --ring: 3px solid rgba(0,0,0,.6);
+    --top-gap: 24px;
+    --map-bottom-trim: 12px;
+    --accent: rgb(251,187,61);
+    --text: #000;
   }
 
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; margin:0; }
-  body{ font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial; color:var(--text); background:var(--panel); }
-
-  /* Layout: sidebar + sticky map */
-  .page{ display:grid; grid-template-columns:340px 1fr; min-height:100dvh; }
-  .sidebar{ padding:24px 18px; max-height:100dvh; overflow:auto; }
-  h1{ margin:0 0 8px; font-family:"Intro Rust Base","IntroRustBase",system-ui; font-weight:400; font-size:clamp(28px,4vw,42px); line-height:1.05; }
-  .lead{ margin:0 0 10px; }
-  .search{ position:sticky; top:6px; background:var(--panel); padding:8px 0 10px; z-index:2; }
-  .search input{
-    width:100%; border:2px solid var(--accent); background:var(--accent);
-    color:#000; border-radius:8px; padding:10px 12px; font-size:15px; outline:none;
+  /* remove inner scroll in Wix embed; mobile restores it */
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
   }
-  .search input::placeholder{ color:#1d1d1d; }
 
-  .region{ margin:14px 0; }
-  .toggle{
-    width:100%; background:transparent; border:0; border-bottom:1px solid #000;
-    padding:10px 2px 8px; font-size:16px; font-weight:700; display:flex; justify-content:space-between; cursor:pointer;
+  /* LEFT COLUMN */
+  .walk-list-wrapper {
+    flex: 0 0 320px;
+    padding: var(--top-gap) 20px 0;
+    height: calc(100vh - var(--map-bottom-trim));
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    z-index: 2;
   }
-  .toggle:focus-visible{ outline:var(--ring); border-radius:6px; }
-  .chev{ color:var(--accent); transition:transform .2s ease; }
-  .toggle[aria-expanded="false"] .chev{ transform: rotate(-90deg); }
 
-  .walk-list{
-    list-style:none; padding:0; margin:8px 0 0; max-height:140px; overflow:auto;
-    scrollbar-width:thin; scrollbar-color: var(--accent) #fff;
+  .map-header { margin: 0 0 16px; }
+  .map-header h1{
+    margin: 0 0 8px;
+    font-family: "Intro Rust Base","INTRO RUST BASE","IntroRustBase", sans-serif;
+    font-size: 42px;
+    line-height: 1.05;
+    font-weight: 400;
+    letter-spacing: 0.2px;
+    color: var(--text);
   }
-  .walk-list::-webkit-scrollbar{ width:8px; } .walk-list::-webkit-scrollbar-thumb{ background:var(--accent); }
-  .walk-item{ margin:6px 0; }
-  .walk-btn{
-    width:100%; text-align:left; background:transparent; border:0; padding:6px 0; font-size:14px; cursor:pointer; border-radius:6px;
+  .map-header p{
+    margin: 0 0 16px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--text);
   }
-  .walk-btn:hover, .walk-btn:focus-visible{ color:var(--accent); background:rgba(251,187,61,.08); padding-left:6px; outline:var(--ring); }
 
-  /* Map area */
-  .mapWrap{ position:relative; background:var(--sea); border-left:1px solid #e5e7eb; }
-  #chartdiv{ width:100%; height:100dvh; }
-
-  /* Sticky HTML popup card (like your original) */
-  .infoBox{
-    position:absolute; display:none; z-index:10;
-    background:#fff; border:1px solid #ccc; border-radius:10px; padding:12px; max-width:260px;
-    font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.18);
-    will-change:left, top;
+  .search-box { margin-top: -6px; margin-bottom: 11px; }
+  .search-box input {
+    width: 92%;
+    padding: 6px 10px;
+    font-size: 14px;
+    border: 2px solid var(--accent);
+    background-color: var(--accent);
+    color: white;
+    border-radius: 8px;
+    outline: none;
   }
-  .infoHeader{ display:grid; grid-template-columns:56px 1fr; gap:10px; align-items:center; margin-bottom:6px; }
-  .logo{ width:56px; height:56px; border-radius:8px; object-fit:cover; display:block; }
-  .name{ font-weight:800; line-height:1.2; }
-  .loc{ color:#111; margin-top:4px; }
-  .links{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-  .links a{ color:#000; text-decoration:none; display:inline-flex; gap:8px; align-items:center; }
-  .links a:hover{ text-decoration:underline; }
+  .search-box input::placeholder { color: #222; }
 
-  @media (max-width: 900px){
-    .page{ display:block; }
-    #chartdiv{ height:65dvh; }
+  h2.region-heading {
+    border-bottom: 1px solid #000;
+    padding-bottom: 4px;
+    margin: 20px 0 8px;
+    font-size: 16px;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
   }
-  .vh{ position:absolute!important; width:1px; height:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
+  h2 .dropdown-icon {
+    font-size: 16px;
+    color: var(--accent);
+    transition: transform 0.3s ease;
+  }
+  h2.collapsed .dropdown-icon { transform: rotate(-90deg); }
+  .collapsed + ul { display: none; }
+
+  .walk-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 6px;
+    max-height: 120px; /* ~4 items */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: white;
+    scrollbar-width: thin;
+    scrollbar-color: white var(--accent);
+  }
+  .walk-list::-webkit-scrollbar { width: 8px; }
+  .walk-list::-webkit-scrollbar-track { background: var(--accent); border-radius: 0; }
+  .walk-list::-webkit-scrollbar-thumb { background: white; border-radius: 0; }
+
+  .walk-list li { margin: 6px 0; }
+  .walk-list button {
+    all: unset;
+    cursor: pointer;
+    color: #000;
+    font-size: 14px;
+    padding: 4px 0;
+    border-radius: 6px;
+  }
+  .walk-list button:hover,
+  .walk-list button:focus-visible {
+    color: var(--accent);
+    background: rgba(251,187,61,.08);
+    padding-left: 6px;
+    outline: 2px solid rgba(0,0,0,.4);
+  }
+
+  /* RIGHT COLUMN (Leaflet map) */
+  .map-wrapper {
+    position: sticky;
+    top: 0;
+    height: calc(100vh - var(--map-bottom-trim));
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    margin-left: -10px;
+    margin-top: var(--top-gap);
+    overflow: hidden;
+    background:#b8e0e2; /* sea */
+  }
+  #map { width: 100%; height: 100%; }
+
+  /* Leaflet default styles */
+  @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+
+  /* Popup (make it look like your original info-box) */
+  .walk-popup.leaflet-popup {
+    pointer-events: auto;
+  }
+  .walk-popup .leaflet-popup-content-wrapper {
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .walk-popup .leaflet-popup-tip {
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .walk-popup .leaflet-popup-content {
+    margin: 10px;
+    text-align: center;
+    font-size: 14px;
+    color:#000;
+  }
+  .walk-popup img.walk-logo {
+    width: 60px; height: auto; border-radius: 6px; display:block; margin:0 auto 8px;
+  }
+  .walk-popup .loc-line { display:inline-flex; align-items:center; gap:6px; margin:4px 0 2px; }
+  .walk-popup .icon-pin { width:16px;height:16px; fill: var(--accent); }
+  .walk-popup .icon-pin .hole { fill: #fff; }
+  .walk-popup .links { margin-top: 8px; display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .walk-popup .links a { text-decoration:none; color:#000; display:inline-flex; align-items:center; gap:8px; }
+  .walk-popup .links a:hover { text-decoration: underline; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    html, body { overflow: auto; height: auto; }
+    body { flex-direction: column; }
+    .map-wrapper { height: auto; order: 2; margin-left: 0; margin-top: 0; }
+    .walk-list-wrapper { order: 1; width: 100%; height: auto; }
+  }
 </style>
+
+<!-- Leaflet JS (after CSS import above) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-  <main class="page">
-    <!-- Sidebar -->
-    <aside class="sidebar" aria-label="Walk directories and search">
-      <h1>MEN'S WALK &amp; TALK MAP</h1>
-      <p class="lead">A fully custom UK map with your colours. Hover or tap a marker to see details; click to open the website.</p>
 
-      <div class="search">
-        <label class="vh" for="walkSearch">Search walks</label>
-        <input id="walkSearch" type="search" placeholder="Search walks… (e.g., London, Cardiff)">
-      </div>
+  <!-- LEFT: Title + lists -->
+  <div class="walk-list-wrapper">
+    <div class="map-header">
+      <h1>MEN'S WALK &amp; TALK MAP</h1> <br>
+      <p>This map of support shines a light on men's walk and talk groups across the UK.</p>
+      <p>Search below to find a walk near you or click on the map to explore.</p>
+    </div>
 
-      <!-- England -->
-      <section class="region" aria-labelledby="heading-england">
-        <button class="toggle" id="heading-england" aria-expanded="true" aria-controls="list-england">
-          England <span class="chev" aria-hidden="true">▼</span>
-        </button>
-        <ul class="walk-list" id="list-england">
-          <li class="walk-item"><button class="walk-btn" data-id="epsom">Surrey – Epsom: We Power On</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="canterbury">Kent – Canterbury: Mindful Steps</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="birmingham">Midlands – Birmingham: Men's Brew Walk</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="london">London – River Walkers</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="manchester">Manchester – Urban Stride</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="liverpool">Liverpool – Dockside Steps</button></li>
-        </ul>
-      </section>
+    <div class="search-box">
+      <input type="text" id="walkSearch" placeholder="Search walks..." />
+    </div>
 
-      <!-- Wales -->
-      <section class="region" aria-labelledby="heading-wales">
-        <button class="toggle" id="heading-wales" aria-expanded="true" aria-controls="list-wales">
-          Wales <span class="chev" aria-hidden="true">▼</span>
-        </button>
-        <ul class="walk-list" id="list-wales">
-          <li class="walk-item"><button class="walk-btn" data-id="cardiff">Cardiff – Walk &amp; Talk Cymru</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="swansea">Swansea – Coastal Strides</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="bangor_wales">Bangor – Mountain Trekkers</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="newport_wales">Newport – Friendship Walk</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="wrexham">Wrexham – Green Steps</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
-        </ul>
-      </section>
+    <!-- ENGLAND -->
+    <h2 class="region-heading" onclick="toggleRegion(this)">England <span class="dropdown-icon">▼</span></h2>
+    <ul class="walk-list" id="list-england">
+      <li><button data-id="epsom">Surrey – Epsom: We Power On</button></li>
+      <li><button data-id="canterbury">Kent – Canterbury: Mindful Steps</button></li>
+      <li><button data-id="birmingham">Midlands – Birmingham: Men's Brew Walk</button></li>
+      <li><button data-id="london">London – River Walkers</button></li>
+      <li><button data-id="manchester">Manchester – Urban Stride</button></li>
+      <li><button data-id="liverpool">Liverpool – Dockside Steps</button></li>
+    </ul>
 
-      <!-- Scotland -->
-      <section class="region" aria-labelledby="heading-scotland">
-        <button class="toggle" id="heading-scotland" aria-expanded="true" aria-controls="list-scotland">
-          Scotland <span class="chev" aria-hidden="true">▼</span>
-        </button>
-        <ul class="walk-list" id="list-scotland">
-          <li class="walk-item"><button class="walk-btn" data-id="edinburgh">Edinburgh – Highland Strides</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="glasgow">Glasgow – Clyde Walkers</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="aberdeen_scot">Aberdeen – Coastal Trekkers</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="dundee">Dundee – Riverside Steps</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="inverness">Inverness – Lochside Strides</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="stirling">Stirling – Castle Path Walk</button></li>
-        </ul>
-      </section>
+    <!-- WALES -->
+    <h2 class="region-heading" onclick="toggleRegion(this)">Wales <span class="dropdown-icon">▼</span></h2>
+    <ul class="walk-list" id="list-wales">
+      <li><button data-id="cardiff">Cardiff – Walk &amp; Talk Cymru</button></li>
+      <li><button data-id="swansea">Swansea – Coastal Strides</button></li>
+      <li><button data-id="bangor_wales">Bangor – Mountain Trekkers</button></li>
+      <li><button data-id="newport_wales">Newport – Friendship Walk</button></li>
+      <li><button data-id="wrexham">Wrexham – Green Steps</button></li>
+      <li><button data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
+    </ul>
 
-      <!-- Northern Ireland -->
-      <section class="region" aria-labelledby="heading-ni">
-        <button class="toggle" id="heading-ni" aria-expanded="true" aria-controls="list-ni">
-          Northern Ireland <span class="chev" aria-hidden="true">▼</span>
-        </button>
-        <ul class="walk-list" id="list-ni">
-          <li class="walk-item"><button class="walk-btn" data-id="belfast">Belfast – Cavehill: Men's Cavehill Walking Club</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="derry">Derry – Riverfront Walkers</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="lisburn">Lisburn – Step Together</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="newry">Newry – Hill Trekkers</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="armagh">Armagh – Orchard Strides</button></li>
-          <li class="walk-item"><button class="walk-btn" data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
-        </ul>
-      </section>
-    </aside>
+    <!-- SCOTLAND -->
+    <h2 class="region-heading" onclick="toggleRegion(this)">Scotland <span class="dropdown-icon">▼</span></h2>
+    <ul class="walk-list" id="list-scotland">
+      <li><button data-id="edinburgh">Edinburgh – Highland Strides</button></li>
+      <li><button data-id="glasgow">Glasgow – Clyde Walkers</button></li>
+      <li><button data-id="aberdeen_scot">Aberdeen – Coastal Trekkers</button></li>
+      <li><button data-id="dundee">Dundee – Riverside Steps</button></li>
+      <li><button data-id="inverness">Inverness – Lochside Strides</button></li>
+      <li><button data-id="stirling">Stirling – Castle Path Walk</button></li>
+    </ul>
 
-    <!-- Map -->
-    <section class="mapWrap" aria-label="Interactive map">
-      <div id="chartdiv"></div>
-      <div id="infoBox" class="infoBox" onmouseenter="cancelHide()" onmouseleave="delayedHide()"></div>
-    </section>
-  </main>
+    <!-- NORTHERN IRELAND -->
+    <h2 class="region-heading" onclick="toggleRegion(this)">Northern Ireland <span class="dropdown-icon">▼</span></h2>
+    <ul class="walk-list" id="list-ni">
+      <li><button data-id="belfast">Belfast – Cavehill: Men's Cavehill Walking Club</button></li>
+      <li><button data-id="derry">Derry – Riverfront Walkers</button></li>
+      <li><button data-id="lisburn">Lisburn – Step Together</button></li>
+      <li><button data-id="newry">Newry – Hill Trekkers</button></li>
+      <li><button data-id="armagh">Armagh – Orchard Strides</button></li>
+      <li><button data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
+    </ul>
+  </div>
+
+  <!-- RIGHT: Map -->
+  <div class="map-wrapper">
+    <div id="map" aria-label="Interactive map with cities and walk locations"></div>
+  </div>
 
 <script>
-/* ========= Config ========= */
-const ICON_URL = "https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp";
-const SITE_URL = "https://www.wepoweron.co.uk";
-const INSTA_URL = "https://instagram.com/we_power_on";
+/* ========= Data / config ========= */
+const ICON = 'https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp';
+const SITE_URL = 'https://www.wepoweron.co.uk';
+const INSTAGRAM_HANDLE = '@we_power_on';
+const INSTAGRAM_URL = 'https://instagram.com/we_power_on';
+
+const ICON_SVG_GLOBE = `
+  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16">
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path>
+  </svg>`;
+const ICON_SVG_INSTA = `
+  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="4"></rect>
+    <circle cx="12" cy="12" r="4.5"></circle>
+    <circle cx="17.2" cy="6.8" r="1.2"></circle>
+  </svg>`;
+const ICON_SVG_PIN = `
+  <svg class="icon-pin" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 2c4.42 0 8 3.34 8 7.46 0 5.53-6.2 11.61-7.46 12.72a.74.74 0 0 1-1.08 0C10.2 21.07 4 15 4 9.46 4 5.34 7.58 2 12 2z"></path>
+    <circle class="hole" cx="12" cy="9" r="3"></circle>
+  </svg>`;
 
 const WALKS = [
   // England
@@ -220,226 +299,184 @@ const WALKS = [
   { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
 ];
 
-/* ========= Region colours (match your map) ========= */
-const REGION_COLORS = {
-  "Scotland": css("--scotland"),
-  "Wales": css("--wales"),
-  "Northern Ireland": css("--ni"),
-  // England regions:
-  "South West": css("--south-west"),
-  "South East": css("--south-east"),
-  "London": css("--london"),
-  "East of England": css("--east-england"),
-  "East Midlands": css("--east-midlands"),
-  "West Midlands": css("--west-midlands"),
-  "North West": css("--north-west"),
-  "Yorkshire and the Humber": css("--yorks-humber"),
-  "North East": css("--north-east"),
-  // Fallback
-  "England": css("--east-england")
-};
-function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-
-/* ========= Build map ========= */
-let root, chart, polygons, points;
-am5.ready(function() {
-  root = am5.Root.new("chartdiv");
-  root.setThemes([ am5themes_Animated.new(root) ]);
-
-  chart = root.container.children.push(am5map.MapChart.new(root, {
-    panX: "translateX", panY: "translateY", wheelY: "zoom",
-    projection: am5map.geoMercator()
-  }));
-
-  // Regions (ukHigh = more detail)
-  polygons = chart.series.push(am5map.MapPolygonSeries.new(root, {
-    geoJSON: am5geodata_ukHigh, calculateAggregates: true
-  }));
-
-  polygons.mapPolygons.template.setAll({
-    tooltipText: "{name}",
-    interactive: true,
-    stroke: am5.color(0xffffff),
-    strokeOpacity: 0.9,
-    strokeWidth: 0.5
-  });
-
-  polygons.mapPolygons.template.adapters.add("fill", (_fill, target) => {
-    const ctx = target.dataItem.dataContext;
-    const name = ctx.name;
-    const country = (ctx.properties || {}).country;
-    const hex = REGION_COLORS[name] || REGION_COLORS[country] || css("--east-england");
-    return am5.color(hex);
-  });
-
-  polygons.mapPolygons.template.states.create("hover", { scale: 1.01, fillOpacity: 0.92 });
-  polygons.mapPolygons.template.events.on("click", (ev) => {
-    chart.zoomToGeoBounds(ev.target.dataItem.get("geoBounds"), 1.8, true);
-  });
-
-  // Home
-  const home = chart.children.push(am5.Button.new(root, {
-    x: am5.p0, y: am5.p0, centerX: am5.p0, centerY: am5.p0,
-    paddingTop:8, paddingRight:10, paddingBottom:8, paddingLeft:10,
-    label: am5.Label.new(root, { text:"Home" })
-  }));
-  home.events.on("click", () => chart.goHome());
-
-  // Markers (use your PNG icon)
-  points = chart.series.push(am5map.MapPointSeries.new(root, {}));
-  const markersById = {};
-
-  WALKS.forEach(w => {
-    const d = points.pushDataItem({ latitude: w.lat, longitude: w.lng, id: w.id });
-    d.bullets.push(() => am5.Bullet.new(root, {
-      sprite: am5.Picture.new(root, {
-        width: 40, height: 46, centerX: am5.p50, centerY: am5.p100, src: ICON_URL
-      })
-    }));
-    // Hover → show sticky popup
-    d.events.on("pointerover", () => showInfo(w));
-    d.events.on("pointerout",  () => delayedHide(150));
-    // Click → open link
-    d.events.on("click",       () => window.open(w.url, "_blank", "noopener"));
-    markersById[w.id] = d;
-  });
-
-  // Sidebar interactions
-  document.querySelectorAll(".walk-btn").forEach(btn=>{
-    const id = btn.dataset.id;
-    const walk = WALKS.find(w => w.id === id);
-    btn.addEventListener("mouseenter", () => showInfo(walk));
-    btn.addEventListener("mouseleave", () => delayedHide(150));
-    btn.addEventListener("click", () => { flyTo(walk); showInfo(walk, {force:true}); });
-  });
-
-  // Expand/collapse sections
-  document.querySelectorAll(".toggle").forEach(t=>{
-    t.addEventListener("click", ()=>{
-      const expanded = t.getAttribute("aria-expanded") === "true";
-      t.setAttribute("aria-expanded", String(!expanded));
-      const list = document.getElementById(t.getAttribute("aria-controls"));
-      list.style.display = expanded ? "none" : "block";
-    });
-  });
-
-  // Search filter (expands groups with matches)
-  const searchEl = document.getElementById("walkSearch");
-  const lists = Array.from(document.querySelectorAll(".walk-list"));
-  const toggles = Array.from(document.querySelectorAll(".toggle"));
-  let saved=null, scheduled=false, q='';
-
-  searchEl.addEventListener("input", ()=>{
-    q = (searchEl.value||'').trim().toLowerCase();
-    if(scheduled) return; scheduled = true; requestAnimationFrame(applySearch);
-  });
-
-  function applySearch(){
-    scheduled = false;
-    const searching = q.length > 0;
-
-    if(searching && !saved){
-      saved = { displays: lists.map(ul=>ul.style.display||''), expanded: toggles.map(b=>b.getAttribute('aria-expanded')) };
-    }
-
-    if(!searching){
-      lists.forEach(ul => ul.querySelectorAll(".walk-item").forEach(li => li.style.display = ""));
-      if(saved){
-        lists.forEach((ul,i)=> ul.style.display = saved.displays[i]);
-        toggles.forEach((b,i)=> b.setAttribute('aria-expanded', saved.expanded[i]));
-        saved = null;
-      }
-      return;
-    }
-
-    lists.forEach((ul,i)=>{
-      let matches = 0;
-      ul.querySelectorAll(".walk-item").forEach(li=>{
-        const ok = (li.textContent||'').toLowerCase().includes(q);
-        li.style.display = ok ? "" : "none";
-        if(ok) matches++;
-      });
-      const btn = toggles[i];
-      if(matches>0){ ul.style.display = "block"; btn.setAttribute('aria-expanded','true'); }
-      else{ ul.style.display = "none"; }
-    });
-  }
-
-  // Keep popup glued while panning/zooming/resizing
-  chart.chartContainer.events.on("boundschanged", ()=> scheduleReposition());
-  window.addEventListener("resize", ()=> scheduleReposition(), {passive:true});
-
-  // Initial view
-  chart.set("zoomStep", 2);
-  chart.goHome();
-
-  // Expose for popup handlers
-  window.delayedHide = delayedHide;
-  window.cancelHide = cancelHide;
-});
-
-/* ========= Sticky popup (HTML) ========= */
-const infoBox = document.getElementById("infoBox");
-let current=null, hideTimer=null, raf=null;
-
-function infoHTML(w){
+/* ========= Build popup HTML ========= */
+function popupHTML(w){
   return `
-    <div class="infoHeader">
-      <img class="logo" src="${ICON_URL}" alt="">
-      <div>
-        <div class="name">${w.name}</div>
-        <div class="loc">📍 ${w.place}</div>
-      </div>
-    </div>
-    <div class="links">
-      <a href="${w.url}" target="_blank" rel="noopener">🌐 wepoweron.co.uk</a>
-      <a href="${INSTA_URL}" target="_blank" rel="noopener">📸 @we_power_on</a>
+    <img src="${ICON}" class="walk-logo" alt="">
+    <strong>${w.name}</strong>
+    <div class='loc-line'>${ICON_SVG_PIN}<span>${w.place}</span></div>
+    <div class='links'>
+      <a href='${w.url}' target='_blank' rel='noopener' aria-label='Website'>
+        ${ICON_SVG_GLOBE}<span>wepoweron.co.uk</span>
+      </a>
+      <a href='${INSTAGRAM_URL}' target='_blank' rel='noopener' aria-label='Instagram'>
+        ${ICON_SVG_INSTA}<span>${INSTAGRAM_HANDLE}</span>
+      </a>
     </div>`;
 }
 
-function showInfo(w, opts={}){
-  if(!w) return;
+/* ========= Leaflet map ========= */
+const map = L.map('map', {
+  zoomControl: true,
+  scrollWheelZoom: true
+}).setView([54.2, -2.7], 6); // UK view
+
+// Nice labelled basemap so cities appear
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM & CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+}).addTo(map);
+
+// Custom marker icon
+const walkIcon = L.icon({
+  iconUrl: ICON,
+  iconSize: [42, 48],
+  iconAnchor: [21, 48],
+  popupAnchor: [0, -50]
+});
+
+// State
+const markers = new Map();
+let currentId = null;
+let hideTimeout = null;
+let hoverLockUntil = 0;
+const HOVER_LOCK_MS = 3000;
+
+// Build markers
+WALKS.forEach(w => {
+  const m = L.marker([w.lat, w.lng], { icon: walkIcon, riseOnHover: true })
+    .addTo(map);
+
+  m.bindPopup(popupHTML(w), {
+    className: 'walk-popup',
+    autoClose: false,
+    closeOnClick: false,
+    closeButton: false,
+    offset: L.point(0, -10)
+  });
+
+  // Hover shows popup; click goes to the website (like your original)
+  m.on('mouseover', () => showWalk(w.id));
+  m.on('mouseout', () => delayedHide());
+  m.on('click', () => window.open(w.url, '_blank', 'noopener'));
+
+  // Keep popup open while hovering it
+  m.on('popupopen', (e) => {
+    const el = e.popup.getElement();
+    if (!el) return;
+    el.addEventListener('mouseenter', cancelHide);
+    el.addEventListener('mouseleave', delayedHide);
+  });
+
+  markers.set(w.id, m);
+});
+
+/* ========= Popup control ========= */
+function showWalk(id, opts={}){
+  if (!opts.force && Date.now() < hoverLockUntil && id !== currentId) return;
+
   cancelHide();
-  current = w;
-  infoBox.innerHTML = infoHTML(w);
-  infoBox.style.display = "block";
-  positionNear(w);
+  const marker = markers.get(id);
+  if (!marker) return;
+
+  // Close previous
+  if (currentId && currentId !== id){
+    const prev = markers.get(currentId);
+    prev && prev.closePopup();
+  }
+  currentId = id;
+  marker.openPopup();
 }
 
-function hideInfo(){ infoBox.style.display = "none"; current=null; }
-function delayedHide(ms=900){ cancelHide(); hideTimer = setTimeout(hideInfo, ms); }
-function cancelHide(){ if(hideTimer){ clearTimeout(hideTimer); hideTimer=null; } }
-
-function positionNear(w){
-  if(!chart) return;
-  const pt = chart.geoToPoint({ latitude:w.lat, longitude:w.lng }); // pixel in chart coords
-  const chartRect = chart.chartContainer._display.toGlobal({x:0,y:0});
-  const boxW = infoBox.offsetWidth || 240;
-  const boxH = infoBox.offsetHeight || 160;
-
-  // Prefer right of marker, center vertically
-  let left = (pt.x - chartRect.x) + 12;
-  let top  = (pt.y - chartRect.y) - (boxH/2);
-
-  // Clamp inside map container
-  const maxLeft = chart.chartContainer.width() - boxW - 8;
-  const maxTop  = chart.chartContainer.height() - boxH - 8;
-  left = Math.max(8, Math.min(left, maxLeft));
-  top  = Math.max(8, Math.min(top,  maxTop));
-
-  infoBox.style.left = left + "px";
-  infoBox.style.top  = top  + "px";
+function hideWalk(){
+  if (currentId){
+    const m = markers.get(currentId);
+    m && m.closePopup();
+    currentId = null;
+  }
 }
-function scheduleReposition(){
-  if(!current) return;
-  if(raf) return;
-  raf = requestAnimationFrame(()=>{ raf=null; if(current) positionNear(current); });
+function delayedHide(){ cancelHide(); hideTimeout = setTimeout(hideWalk, 8000); } // 8s like your original
+function cancelHide(){ if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
+
+/* ========= Sidebar behaviour ========= */
+function toggleRegion(h){
+  h.classList.toggle('collapsed');
+  const list = h.nextElementSibling;
+  if (list && list.tagName === 'UL'){
+    list.style.display = (list.style.display === 'none') ? 'block' : 'none';
+  }
 }
 
-/* ========= Helper ========= */
-function flyTo(w){
-  chart.zoomToGeoPoint({ latitude:w.lat, longitude:w.lng }, 8, true);
+document.querySelectorAll('.walk-list button').forEach(btn=>{
+  const id = btn.dataset.id;
+  const w = WALKS.find(x=>x.id===id);
+  btn.addEventListener('mouseenter', ()=> showWalk(id));
+  btn.addEventListener('mouseleave', ()=> delayedHide());
+  btn.addEventListener('click', ()=>{
+    const m = markers.get(id);
+    if (!m) return;
+    hoverLockUntil = Date.now() + HOVER_LOCK_MS;
+    map.flyTo(m.getLatLng(), Math.max(9, map.getZoom()), { duration: 0.7 });
+    showWalk(id, { force:true });
+  });
+});
+
+/* ========= Search (expand groups with matches) ========= */
+const walkSearch = document.getElementById('walkSearch');
+const regionHeadings = Array.from(document.querySelectorAll('h2.region-heading'));
+const lists = Array.from(document.querySelectorAll('.walk-list'));
+let saved = null, scheduled = false, query = '';
+
+walkSearch.addEventListener('input', ()=>{
+  query = (walkSearch.value || '').trim().toLowerCase();
+  if (scheduled) return;
+  scheduled = true;
+  requestAnimationFrame(applyFilter);
+});
+
+function applyFilter(){
+  scheduled = false;
+  const searching = query.length > 0;
+
+  if (searching && !saved){
+    saved = {
+      ulDisplay: lists.map(ul => ul.style.display || ''),
+      collapsed: regionHeadings.map(h => h.classList.contains('collapsed')),
+    };
+  }
+
+  if (!searching){
+    lists.forEach(ul => ul.querySelectorAll('li').forEach(li => li.style.display = ''));
+    if (saved){
+      lists.forEach((ul,i)=> ul.style.display = saved.ulDisplay[i]);
+      regionHeadings.forEach((h,i)=> h.classList.toggle('collapsed', saved.collapsed[i]));
+      saved = null;
+    }
+    return;
+  }
+
+  lists.forEach((ul, i) => {
+    let matches = 0;
+    ul.querySelectorAll('li').forEach(li => {
+      const ok = (li.textContent || '').toLowerCase().includes(query);
+      li.style.display = ok ? '' : 'none';
+      if (ok) matches++;
+    });
+
+    const heading = regionHeadings[i];
+    if (matches > 0) {
+      ul.style.display = 'block';
+      heading.classList.remove('collapsed');
+    } else {
+      ul.style.display = 'none';
+    }
+  });
 }
+
+/* ========= Quality-of-life ========= */
+map.on('movestart', cancelHide); // don't auto-hide mid-panning
+map.on('zoomstart', cancelHide);
 </script>
 </body>
 </html>
