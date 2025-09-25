@@ -16,10 +16,7 @@
       --ring: 3px solid rgba(0,0,0,.6);
       --ring-accent: 3px solid rgba(251,187,61,.8);
     }
-    body{
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
-      margin: 0; color: var(--text); background: var(--bg);
-    }
+    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; margin:0; color:var(--text); background:var(--bg); }
     *{ box-sizing:border-box; }
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration:.001ms!important; transition-duration:.001ms!important; scroll-behavior:auto!important; }
@@ -59,7 +56,7 @@
     .marker.visible{ opacity:1; transform:translate(-50%, -100%) scale(1.02); }
     .marker:focus-visible{ outline:var(--ring-accent); border-radius:4px; }
 
-    /* Info box – positioned RELATIVE to .map (no window scroll math) */
+    /* Info box (map-relative positioning) */
     .info-box{
       position:absolute; background:#fff; border:1px solid #ccc; border-radius:var(--radius);
       padding:12px; max-width:260px; z-index:3; font-size:14px; box-shadow:0 2px 16px rgba(0,0,0,.18);
@@ -310,11 +307,13 @@
       bangor_ni:{html:header('Coastal Breeze Walk','Bangor (NI)')+LINK_HTML}
     };
 
-    /* State */
+    /* State & timing */
     const infoBox=document.getElementById('info-box');
     const markerMap=new Map(Array.from(document.querySelectorAll('.marker')).map(el=>[el.id.replace('marker-',''),el]));
     let prevVisibleMarker=null, currentWalkId=null, hideTimeout=null, hoverLockUntil=0;
     const HOVER_LOCK_MS=3000;
+    const HIDE_DELAY_MS=1200;       // ⬅ stays visible longer
+    const LEAVE_GRACE_MS=80;        // ⬅ tiny grace to cross the gap
 
     /* Region toggles */
     document.querySelectorAll('.region-toggle').forEach(btn=>{
@@ -337,7 +336,6 @@
     const lists=Array.from(document.querySelectorAll('.walk-list'));
     const regionToggles=Array.from(document.querySelectorAll('.region-toggle'));
     let saved=null, scheduled=false, pendingQuery='';
-
     searchEl.addEventListener('input',()=>{
       pendingQuery=(searchEl.value||'').trim().toLowerCase();
       if(scheduled) return; scheduled=true; requestAnimationFrame(applySearch);
@@ -367,52 +365,64 @@
       const id=btn.dataset.id;
       btn.addEventListener('click',()=>{ hoverLockUntil=Date.now()+HOVER_LOCK_MS; showWalk(id,{force:true}); });
       btn.addEventListener('mouseenter',()=>showWalk(id));
-      btn.addEventListener('mouseleave',delayedHide);
+      btn.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS)); // small grace
     });
 
     /* Marker interactions */
     markerMap.forEach((marker,id)=>{
-      marker.parentElement.addEventListener('mouseenter',()=>showWalk(id));
-      marker.parentElement.addEventListener('mouseleave',delayedHide);
+      const anchor = marker.parentElement; // <a>
+      anchor.addEventListener('mouseenter',()=>showWalk(id));
+      anchor.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS)); // small grace leaving the pin
       marker.addEventListener('focus',()=>showWalk(id,{force:true}));
-      marker.addEventListener('blur',delayedHide);
+      marker.addEventListener('blur',()=> delayedHide(HIDE_DELAY_MS));
+      // clicking the pin goes to the site (default <a> behavior), no JS needed
     });
+
+    // Keep the card open while the cursor is inside it,
+    // and only hide after a longer delay once it leaves.
+    infoBox.addEventListener('mouseenter', cancelHide);
+    infoBox.addEventListener('mouseleave', ()=> delayedHide(HIDE_DELAY_MS));
 
     function showWalk(id,opts={}){
       if(!opts.force && Date.now()<hoverLockUntil && id!==currentWalkId) return;
-      clearTimeout(hideTimeout); currentWalkId=id;
+      cancelHide(); currentWalkId=id;
       const marker=markerMap.get(id);
       if(prevVisibleMarker && prevVisibleMarker!==marker){ prevVisibleMarker.classList.remove('visible'); }
       if(marker){ marker.classList.add('visible'); prevVisibleMarker=marker; }
       infoBox.innerHTML=walkData[id]?.html||''; infoBox.style.display='block';
       if(marker) positionInfoBoxNearMarker(marker);
     }
-    function delayedHide(){ hideTimeout=setTimeout(hideWalk,600); }
-    function hideWalk(){ if(prevVisibleMarker){ prevVisibleMarker.classList.remove('visible'); prevVisibleMarker=null; } infoBox.style.display='none'; currentWalkId=null; }
 
-    /* === FIXED: position relative to .map (no window scroll offsets) === */
+    function delayedHide(delay=HIDE_DELAY_MS){
+      cancelHide();
+      hideTimeout=setTimeout(hideWalk, delay);
+    }
+    function cancelHide(){
+      if(hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; }
+    }
+    function hideWalk(){
+      if(prevVisibleMarker){ prevVisibleMarker.classList.remove('visible'); prevVisibleMarker=null; }
+      infoBox.style.display='none';
+      currentWalkId=null;
+    }
+
+    /* Map-relative positioning for the info box */
     function positionInfoBoxNearMarker(markerEl){
       const mapEl=document.querySelector('.map');
       const mapRect=mapEl.getBoundingClientRect();
       const mr=markerEl.getBoundingClientRect();
 
-      // ensure box is measurable
       const prevDisplay=infoBox.style.display;
       infoBox.style.display='block';
       const boxW=infoBox.offsetWidth||240;
       const boxH=infoBox.offsetHeight||160;
 
-      // compute relative to map container
-      let left = (mr.right - mapRect.left) + 12;                           // right of marker
-      let top  = (mr.top - mapRect.top) + (mr.height/2) - (boxH/2);        // center vertically
+      let left = (mr.right - mapRect.left) + 12;                    // right of marker
+      let top  = (mr.top - mapRect.top) + (mr.height/2) - (boxH/2); // center vertically
 
-      // if no room on right, place left of marker
       const mapRight=mapRect.width;
-      if(left + boxW > mapRight - 8){
-        left = (mr.left - mapRect.left) - boxW - 12;
-      }
+      if(left + boxW > mapRight - 8){ left = (mr.left - mapRect.left) - boxW - 12; }
 
-      // clamp within map
       const minLeft = 8, maxLeft = mapRect.width - boxW - 8;
       const minTop  = 8, maxTop  = mapRect.height - boxH - 8;
       left = Math.max(minLeft, Math.min(left, maxLeft));
@@ -423,7 +433,7 @@
       if(prevDisplay==='none') infoBox.style.display='none';
     }
 
-    // Keep the box hugging its marker on resize/scroll
+    // Reposition on resize/scroll (rAF-throttled)
     let _raf=null;
     function scheduleReposition(){
       if(!currentWalkId) return;
@@ -438,7 +448,7 @@
     window.addEventListener('resize', scheduleReposition, {passive:true});
     window.addEventListener('scroll', scheduleReposition,  {passive:true});
 
-    /* Alphabetise town names inside each region */
+    /* Alphabetise towns in each region */
     document.querySelectorAll('.walk-list').forEach(ul=>{
       const items=[...ul.querySelectorAll('.walk-item')];
       const key=el=>{
