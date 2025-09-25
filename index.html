@@ -1,482 +1,479 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>We Power On Map — Proper, Responsive, With Cities & Popups</title>
-
-<!-- Intro Rust Base (H1 only) -->
+  <title>We Power On — Men's Walk & Talk Map</title>
 <style>
-  @font-face{
-    font-family:"Intro Rust Base";
-    src:url("https://static.wixstatic.com/ufonts/0737e3_d7be359c419b4134a1683bddb51a5197/woff2/file.woff2") format("woff2");
-    font-weight:400; font-style:normal; font-display:swap;
-  }
-
   :root{
+      --accent: rgb(251,187,61);
+      --text: #0A0A0A;
+      --border: #DDD;
+      --bg: #FFF;
     --top-gap: 24px;
     --map-bottom-trim: 12px;
-    --accent: rgb(251,187,61);
-    --text: #000;
-  }
+      --radius: 10px;
+      --ring: 3px solid rgba(0,0,0,.6);
+      --ring-accent: 3px solid rgba(251,187,61,.8);
+      --map-ar: 1600/1100; /* exact aspect ratio of your image */
+    }
+    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans"; margin:0; color:var(--text); background:var(--bg); }
+    *{ box-sizing:border-box; }
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms!important; transition-duration:.001ms!important; scroll-behavior:auto!important; }
+    }
 
-  /* remove inner scroll in Wix embed; mobile restores it */
-  html, body { height: 100%; overflow: hidden; }
-  body {
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-  }
+    /* Layout */
+    .page{ display:grid; grid-template-columns:340px 1fr; min-height:100dvh; }
+    .sidebar{ padding:var(--top-gap) 20px 20px; max-height:100dvh; overflow:auto; }
+    .map-stick{ position:sticky; top:0; height:calc(100dvh - var(--map-bottom-trim)); display:flex; align-items:flex-start; }
+    .map-frame{ flex:1; display:flex; border-left:1px solid var(--border); margin-left:-10px; }
+    /* The magic: a fixed-aspect canvas that scales responsively */
+    .map-ratio{ position:relative; aspect-ratio: var(--map-ar); width:100%; max-height:100%; margin:auto; }
+    /* Absolutely positioned canvas so children can use % coordinates */
+    .map-canvas{ position:absolute; inset:0; overflow:hidden; overscroll-behavior:contain; background:#fff; }
+    .map-img{ position:absolute; inset:0; width:100%; height:100%; object-fit: fill; display:block; }
 
-  /* LEFT COLUMN */
-  .walk-list-wrapper {
-    flex: 0 0 320px;
-    padding: var(--top-gap) 20px 0;
-    height: calc(100vh - var(--map-bottom-trim));
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    z-index: 2;
-  }
+    /* Header */
+    .map-header h1{ margin:0 6px 8px 0; font-size:clamp(28px,5vw,42px); line-height:1.05; font-weight:800; }
+    .map-header p{ margin:0 0 8px; font-size:16px; line-height:1.45; }
 
-  .map-header { margin: 0 0 16px; }
-  .map-header h1{
-    margin: 0 0 8px;
-    font-family: "Intro Rust Base","INTRO RUST BASE","IntroRustBase", sans-serif;
-    font-size: 42px;
-    line-height: 1.05;
-    font-weight: 400;
-    letter-spacing: 0.2px;
-    color: var(--text);
-  }
-  .map-header p{
-    margin: 0 0 16px;
-    font-size: 16px;
-    line-height: 1.4;
-    color: var(--text);
-  }
+    /* Search */
+    .search{ margin:10px 0 14px; position:sticky; top:8px; background:var(--bg); padding-bottom:8px; z-index:2; }
+    .search input{ width:100%; padding:10px 12px; font-size:15px; border:2px solid var(--accent); background:var(--accent); color:#000; border-radius:8px; outline:none; }
+    .search input::placeholder{ color:#212121; }
+    .search input:focus{ outline:var(--ring-accent); }
 
-  .search-box { margin-top: -6px; margin-bottom: 11px; }
-  .search-box input {
-    width: 92%;
-    padding: 6px 10px;
-    font-size: 14px;
-    border: 2px solid var(--accent);
-    background-color: var(--accent);
-    color: white;
-    border-radius: 8px;
-    outline: none;
-  }
-  .search-box input::placeholder { color: #222; }
+    /* Regions & lists */
+    .region{ margin:16px 0; }
+    .region-toggle{ width:100%; background:transparent; border:0; border-bottom:1px solid #000; padding:10px 2px 8px; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+    .region-toggle:focus-visible{ outline:var(--ring); border-radius:6px; }
+    .region-icon{ color:var(--accent); transition:transform .25s ease; }
+    .region-toggle[aria-expanded="false"] .region-icon{ transform:rotate(-90deg); }
+    .walk-list{ list-style:none; padding:0; margin:8px 0 0; max-height:140px; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--accent) #fff; }
+    .walk-list::-webkit-scrollbar{ width:8px; } .walk-list::-webkit-scrollbar-thumb{ background:var(--accent); }
+    .walk-item{ margin:6px 0; }
+    .walk-btn{ width:100%; text-align:left; background:transparent; border:0; padding:6px 0; font-size:14px; cursor:pointer; border-radius:6px; }
+    .walk-btn:hover, .walk-btn:focus-visible{ color:var(--accent); outline:var(--ring); background:rgba(251,187,61,.08); padding-left:6px; }
 
-  h2.region-heading {
-    border-bottom: 1px solid #000;
-    padding-bottom: 4px;
-    margin: 20px 0 8px;
-    font-size: 16px;
-    color: #000;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-  }
-  h2 .dropdown-icon {
-    font-size: 16px;
-    color: var(--accent);
-    transition: transform 0.3s ease;
-  }
-  h2.collapsed .dropdown-icon { transform: rotate(-90deg); }
-  .collapsed + ul { display: none; }
+    /* Markers positioned by % on the exact canvas */
+    .marker{ position:absolute; height:44px; width:auto; transform: translate(-50%, -100%); z-index:2; opacity:0; transition:opacity .2s, transform .2s; cursor:pointer; }
+    .marker.visible{ opacity:1; transform: translate(-50%, -100%) scale(1.02); }
+    .marker:focus-visible{ outline:var(--ring-accent); border-radius:4px; }
 
-  .walk-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 6px;
-    max-height: 120px; /* ~4 items */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    background: white;
-    scrollbar-width: thin;
-    scrollbar-color: white var(--accent);
-  }
-  .walk-list::-webkit-scrollbar { width: 8px; }
-  .walk-list::-webkit-scrollbar-track { background: var(--accent); border-radius: 0; }
-  .walk-list::-webkit-scrollbar-thumb { background: white; border-radius: 0; }
+    /* Info box pinned to the same canvas */
+    .info-box{ position:absolute; background:#fff; border:1px solid #ccc; border-radius:var(--radius); padding:12px; max-width:260px; z-index:3; font-size:14px; box-shadow:0 2px 16px rgba(0,0,0,.18); display:none; text-align:left; will-change:left, top; }
+    .info-header{ display:grid; grid-template-columns:48px 1fr; gap:10px; align-items:center; margin-bottom:6px; }
+    .walk-logo{ width:48px; height:48px; border-radius:6px; object-fit:cover; display:block; }
+    .walk-name{ font-weight:800; line-height:1.2; }
+    .loc-line{ display:inline-flex; align-items:center; gap:6px; margin:6px 0 2px; }
+    .icon-pin{ width:16px; height:16px; fill:var(--accent); } .icon-pin .hole{ fill:#fff; }
+    .links{ margin-top:8px; display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+    .link{ text-decoration:none; color:#000; display:inline-flex; align-items:center; gap:8px; }
+    .link:hover, .link:focus-visible{ text-decoration:underline; outline:var(--ring); border-radius:6px; }
+    .icon{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
-  .walk-list li { margin: 6px 0; }
-  .walk-list button {
-    all: unset;
-    cursor: pointer;
-    color: #000;
-    font-size: 14px;
-    padding: 4px 0;
-    border-radius: 6px;
-  }
-  .walk-list button:hover,
-  .walk-list button:focus-visible {
-    color: var(--accent);
-    background: rgba(251,187,61,.08);
-    padding-left: 6px;
-    outline: 2px solid rgba(0,0,0,.4);
-  }
-
-  /* RIGHT COLUMN (Leaflet map) */
-  .map-wrapper {
-    position: sticky;
-    top: 0;
-    height: calc(100vh - var(--map-bottom-trim));
-    flex: 1;
-    display: flex;
-    align-items: stretch;
-    margin-left: -10px;
-    margin-top: var(--top-gap);
-    overflow: hidden;
-    background:#b8e0e2; /* sea */
-  }
-  #map { width: 100%; height: 100%; }
-
-  /* Leaflet default styles */
-  @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
-
-  /* Popup (make it look like your original info-box) */
-  .walk-popup.leaflet-popup {
-    pointer-events: auto;
-  }
-  .walk-popup .leaflet-popup-content-wrapper {
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  }
-  .walk-popup .leaflet-popup-tip {
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  }
-  .walk-popup .leaflet-popup-content {
-    margin: 10px;
-    text-align: center;
-    font-size: 14px;
-    color:#000;
-  }
-  .walk-popup img.walk-logo {
-    width: 60px; height: auto; border-radius: 6px; display:block; margin:0 auto 8px;
-  }
-  .walk-popup .loc-line { display:inline-flex; align-items:center; gap:6px; margin:4px 0 2px; }
-  .walk-popup .icon-pin { width:16px;height:16px; fill: var(--accent); }
-  .walk-popup .icon-pin .hole { fill: #fff; }
-  .walk-popup .links { margin-top: 8px; display:flex; flex-direction:column; gap:6px; align-items:center; }
-  .walk-popup .links a { text-decoration:none; color:#000; display:inline-flex; align-items:center; gap:8px; }
-  .walk-popup .links a:hover { text-decoration: underline; }
-
-  /* Mobile */
-  @media (max-width: 768px) {
-    html, body { overflow: auto; height: auto; }
-    body { flex-direction: column; }
-    .map-wrapper { height: auto; order: 2; margin-left: 0; margin-top: 0; }
-    .walk-list-wrapper { order: 1; width: 100%; height: auto; }
-  }
+    @media (max-width:768px){
+      .page{ display:block; min-height:auto; }
+      .sidebar{ max-height:none; padding:16px; }
+      .map-stick{ position:static; height:auto; margin-top:8px; }
+      .map-frame{ margin-left:0; border-left:0; }
+      .info-box{ left:10px !important; right:10px !important; max-width:unset; }
+    }
+    .visually-hidden{ position:absolute!important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
 </style>
-
-<!-- Leaflet JS (after CSS import above) -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-
-  <!-- LEFT: Title + lists -->
-  <div class="walk-list-wrapper">
-    <div class="map-header">
-      <h1>MEN'S WALK &amp; TALK MAP</h1> <br>
-      <p>This map of support shines a light on men's walk and talk groups across the UK.</p>
+  <main class="page" id="main">
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Walk directories and search">
+      <header class="map-header">
+        <h1>MEN'S WALK &amp; TALK MAP</h1>
+        <p>This map of support shines a light on men's walk &amp; talk groups across the UK.</p>
       <p>Search below to find a walk near you or click on the map to explore.</p>
+      </header>
+
+      <div class="search">
+        <label for="walkSearch" class="visually-hidden">Search walks</label>
+        <input type="search" id="walkSearch" placeholder="Search walks…" aria-label="Search walks"/>
     </div>
 
-    <div class="search-box">
-      <input type="text" id="walkSearch" placeholder="Search walks..." />
-    </div>
-
-    <!-- ENGLAND -->
-    <h2 class="region-heading" onclick="toggleRegion(this)">England <span class="dropdown-icon">▼</span></h2>
-    <ul class="walk-list" id="list-england">
-      <li><button data-id="epsom">Surrey – Epsom: We Power On</button></li>
-      <li><button data-id="canterbury">Kent – Canterbury: Mindful Steps</button></li>
-      <li><button data-id="birmingham">Midlands – Birmingham: Men's Brew Walk</button></li>
-      <li><button data-id="london">London – River Walkers</button></li>
-      <li><button data-id="manchester">Manchester – Urban Stride</button></li>
-      <li><button data-id="liverpool">Liverpool – Dockside Steps</button></li>
+      <!-- Regions (same as before) -->
+      <section class="region" aria-labelledby="heading-england">
+        <button class="region-toggle" id="heading-england" aria-expanded="true" aria-controls="list-england">
+          England <span class="region-icon" aria-hidden="true">▼</span>
+        </button>
+        <ul class="walk-list" id="list-england" role="list">
+          <li class="walk-item"><button class="walk-btn" data-id="epsom">Surrey – Epsom: We Power On</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="canterbury">Kent – Canterbury: Mindful Steps</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="birmingham">Midlands – Birmingham: Men's Brew Walk</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="london">London – River Walkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="manchester">Manchester – Urban Stride</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="liverpool">Liverpool – Dockside Steps</button></li>
     </ul>
+      </section>
 
-    <!-- WALES -->
-    <h2 class="region-heading" onclick="toggleRegion(this)">Wales <span class="dropdown-icon">▼</span></h2>
-    <ul class="walk-list" id="list-wales">
-      <li><button data-id="cardiff">Cardiff – Walk &amp; Talk Cymru</button></li>
-      <li><button data-id="swansea">Swansea – Coastal Strides</button></li>
-      <li><button data-id="bangor_wales">Bangor – Mountain Trekkers</button></li>
-      <li><button data-id="newport_wales">Newport – Friendship Walk</button></li>
-      <li><button data-id="wrexham">Wrexham – Green Steps</button></li>
-      <li><button data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
+      <section class="region" aria-labelledby="heading-wales">
+        <button class="region-toggle" id="heading-wales" aria-expanded="true" aria-controls="list-wales">
+          Wales <span class="region-icon" aria-hidden="true">▼</span>
+        </button>
+        <ul class="walk-list" id="list-wales" role="list">
+          <li class="walk-item"><button class="walk-btn" data-id="cardiff">Cardiff – Walk &amp; Talk Cymru</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="swansea">Swansea – Coastal Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="bangor_wales">Bangor – Mountain Trekkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="newport_wales">Newport – Friendship Walk</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="wrexham">Wrexham – Green Steps</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
     </ul>
+      </section>
 
-    <!-- SCOTLAND -->
-    <h2 class="region-heading" onclick="toggleRegion(this)">Scotland <span class="dropdown-icon">▼</span></h2>
-    <ul class="walk-list" id="list-scotland">
-      <li><button data-id="edinburgh">Edinburgh – Highland Strides</button></li>
-      <li><button data-id="glasgow">Glasgow – Clyde Walkers</button></li>
-      <li><button data-id="aberdeen_scot">Aberdeen – Coastal Trekkers</button></li>
-      <li><button data-id="dundee">Dundee – Riverside Steps</button></li>
-      <li><button data-id="inverness">Inverness – Lochside Strides</button></li>
-      <li><button data-id="stirling">Stirling – Castle Path Walk</button></li>
+      <section class="region" aria-labelledby="heading-scotland">
+        <button class="region-toggle" id="heading-scotland" aria-expanded="true" aria-controls="list-scotland">
+          Scotland <span class="region-icon" aria-hidden="true">▼</span>
+        </button>
+        <ul class="walk-list" id="list-scotland" role="list">
+          <li class="walk-item"><button class="walk-btn" data-id="edinburgh">Edinburgh – Highland Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="glasgow">Glasgow – Clyde Walkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="aberdeen_scot">Aberdeen – Coastal Trekkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="dundee">Dundee – Riverside Steps</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="inverness">Inverness – Lochside Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="stirling">Stirling – Castle Path Walk</button></li>
     </ul>
+      </section>
 
-    <!-- NORTHERN IRELAND -->
-    <h2 class="region-heading" onclick="toggleRegion(this)">Northern Ireland <span class="dropdown-icon">▼</span></h2>
-    <ul class="walk-list" id="list-ni">
-      <li><button data-id="belfast">Belfast – Cavehill: Men's Cavehill Walking Club</button></li>
-      <li><button data-id="derry">Derry – Riverfront Walkers</button></li>
-      <li><button data-id="lisburn">Lisburn – Step Together</button></li>
-      <li><button data-id="newry">Newry – Hill Trekkers</button></li>
-      <li><button data-id="armagh">Armagh – Orchard Strides</button></li>
-      <li><button data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
+      <section class="region" aria-labelledby="heading-ni">
+        <button class="region-toggle" id="heading-ni" aria-expanded="true" aria-controls="list-ni">
+          Northern Ireland <span class="region-icon" aria-hidden="true">▼</span>
+        </button>
+        <ul class="walk-list" id="list-ni" role="list">
+          <li class="walk-item"><button class="walk-btn" data-id="belfast">Belfast – Cavehill: Men's Cavehill Walking Club</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="derry">Derry – Riverfront Walkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="lisburn">Lisburn – Step Together</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="newry">Newry – Hill Trekkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="armagh">Armagh – Orchard Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
     </ul>
+      </section>
+    </aside>
+
+    <!-- Map -->
+    <section class="map-stick" aria-label="UK map">
+      <div class="map-frame">
+        <div class="map-ratio">
+          <div class="map-canvas" id="mapCanvas">
+            <img
+              src="https://static.wixstatic.com/media/0115fe_de5d106d4b3b46579b02adc51d9131d4~mv2.webp"
+              alt="Map of the UK"
+              class="map-img"
+              decoding="async"
+              fetchpriority="high"
+              width="1600" height="1100"
+            />
+
+            <!-- England -->
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-epsom" class="marker" alt="" style="top:77%; left:66%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-canterbury" class="marker" alt="" style="top:83%; left:79%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-birmingham" class="marker" alt="" style="top:72%; left:63%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-london" class="marker" alt="" style="top:84%; left:74%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-manchester" class="marker" alt="" style="top:62%; left:55%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-liverpool" class="marker" alt="" style="top:62%; left:52%;">
+            </a>
+
+            <!-- Wales -->
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-cardiff" class="marker" alt="" style="top:78%; left:50%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-swansea" class="marker" alt="" style="top:78%; left:46%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-bangor_wales" class="marker" alt="" style="top:58%; left:46%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-newport_wales" class="marker" alt="" style="top:77%; left:51%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-wrexham" class="marker" alt="" style="top:63%; left:49%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-aberystwyth" class="marker" alt="" style="top:69%; left:45%;">
+            </a>
+
+            <!-- Scotland -->
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-edinburgh" class="marker" alt="" style="top:45%; left:67%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-glasgow" class="marker" alt="" style="top:46%; left:61%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-aberdeen_scot" class="marker" alt="" style="top:34%; left:70%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-dundee" class="marker" alt="" style="top:41%; left:68%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-inverness" class="marker" alt="" style="top:32%; left:60%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-stirling" class="marker" alt="" style="top:43%; left:62%;">
+            </a>
+
+            <!-- Northern Ireland -->
+            <a href="https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-belfast" class="marker" alt="" style="top:47%; left:38%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-derry" class="marker" alt="" style="top:48%; left:34%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-lisburn" class="marker" alt="" style="top:50%; left:39%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-newry" class="marker" alt="" style="top:55%; left:40%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-armagh" class="marker" alt="" style="top:53%; left:38%;">
+            </a>
+            <a href="https://www.wepoweron.co.uk" target="_blank" rel="noopener">
+              <img src="https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp" id="marker-bangor_ni" class="marker" alt="" style="top:47%; left:41%;">
+            </a>
+
+            <!-- Popup -->
+            <div id="info-box" class="info-box" role="dialog" aria-live="polite" aria-modal="false"></div>
+          </div>
   </div>
-
-  <!-- RIGHT: Map -->
-  <div class="map-wrapper">
-    <div id="map" aria-label="Interactive map with cities and walk locations"></div>
   </div>
+    </section>
+  </main>
 
 <script>
-/* ========= Data / config ========= */
-const ICON = 'https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp';
-const SITE_URL = 'https://www.wepoweron.co.uk';
-const INSTAGRAM_HANDLE = '@we_power_on';
-const INSTAGRAM_URL = 'https://instagram.com/we_power_on';
+    /* Content & icons */
+    const ICON='https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp';
+    const SITE_URL='https://www.wepoweron.co.uk';
+    const INSTAGRAM_HANDLE='@we_power_on';
+    const INSTAGRAM_URL='https://instagram.com/we_power_on';
+    const ICON_SVG_GLOBE=`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>`;
+    const ICON_SVG_INSTA=`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"></rect><circle cx="12" cy="12" r="4.5"></circle><circle cx="17.2" cy="6.8" r="1.2"></circle></svg>`;
+    const ICON_SVG_PIN=`<svg class="icon-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c4.42 0 8 3.34 8 7.46 0 5.53-6.2 11.61-7.46 12.72a.74.74 0 0 1-1.08 0C10.2 21.07 4 15 4 9.46 4 5.34 7.58 2 12 2z"></path><circle class="hole" cx="12" cy="9" r="3"></circle></svg>`;
+    const LINK_HTML=`
+      <div class="links">
+        <a class="link" href="${SITE_URL}" target="_blank" rel="noopener" aria-label="Website (opens in new tab)">${ICON_SVG_GLOBE}<span>wepoweron.co.uk</span></a>
+        <a class="link" href="${INSTAGRAM_URL}" target="_blank" rel="noopener" aria-label="Instagram (opens in new tab)">${ICON_SVG_INSTA}<span>${INSTAGRAM_HANDLE}</span></a>
+      </div>`;
 
-const ICON_SVG_GLOBE = `
-  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16">
-    <circle cx="12" cy="12" r="9"></circle>
-    <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path>
-  </svg>`;
-const ICON_SVG_INSTA = `
-  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16">
-    <rect x="3.5" y="3.5" width="17" height="17" rx="4"></rect>
-    <circle cx="12" cy="12" r="4.5"></circle>
-    <circle cx="17.2" cy="6.8" r="1.2"></circle>
-  </svg>`;
-const ICON_SVG_PIN = `
-  <svg class="icon-pin" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path d="M12 2c4.42 0 8 3.34 8 7.46 0 5.53-6.2 11.61-7.46 12.72a.74.74 0 0 1-1.08 0C10.2 21.07 4 15 4 9.46 4 5.34 7.58 2 12 2z"></path>
-    <circle class="hole" cx="12" cy="9" r="3"></circle>
-  </svg>`;
-
-const WALKS = [
-  // England
-  { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:SITE_URL },
-  { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:SITE_URL },
-  { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:SITE_URL },
-  { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:SITE_URL },
-  { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:SITE_URL },
-  { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:SITE_URL },
-  // Wales
-  { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:SITE_URL },
-  { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:SITE_URL },
-  { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:SITE_URL },
-  { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:SITE_URL },
-  { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:SITE_URL },
-  { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:SITE_URL },
-  // Scotland
-  { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:SITE_URL },
-  { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:SITE_URL },
-  { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:SITE_URL },
-  { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:SITE_URL },
-  { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:SITE_URL },
-  { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:SITE_URL },
-  // Northern Ireland
-  { id:"belfast",    name:"Men's Cavehill Walking Club", place:"Belfast, Cavehill", lat:54.597, lng:-5.930, url:"https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" },
-  { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:SITE_URL },
-  { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:SITE_URL },
-  { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:SITE_URL },
-  { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:SITE_URL },
-  { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
-];
-
-/* ========= Build popup HTML ========= */
-function popupHTML(w){
-  return `
-    <img src="${ICON}" class="walk-logo" alt="">
-    <strong>${w.name}</strong>
-    <div class='loc-line'>${ICON_SVG_PIN}<span>${w.place}</span></div>
-    <div class='links'>
-      <a href='${w.url}' target='_blank' rel='noopener' aria-label='Website'>
-        ${ICON_SVG_GLOBE}<span>wepoweron.co.uk</span>
-      </a>
-      <a href='${INSTAGRAM_URL}' target='_blank' rel='noopener' aria-label='Instagram'>
-        ${ICON_SVG_INSTA}<span>${INSTAGRAM_HANDLE}</span>
-      </a>
-    </div>`;
-}
-
-/* ========= Leaflet map ========= */
-const map = L.map('map', {
-  zoomControl: true,
-  scrollWheelZoom: true
-}).setView([54.2, -2.7], 6); // UK view
-
-// Nice labelled basemap so cities appear
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OSM & CARTO',
-  subdomains: 'abcd',
-  maxZoom: 19
-}).addTo(map);
-
-// Custom marker icon
-const walkIcon = L.icon({
-  iconUrl: ICON,
-  iconSize: [42, 48],
-  iconAnchor: [21, 48],
-  popupAnchor: [0, -50]
-});
-
-// State
-const markers = new Map();
-let currentId = null;
-let hideTimeout = null;
-let hoverLockUntil = 0;
-const HOVER_LOCK_MS = 3000;
-
-// Build markers
-WALKS.forEach(w => {
-  const m = L.marker([w.lat, w.lng], { icon: walkIcon, riseOnHover: true })
-    .addTo(map);
-
-  m.bindPopup(popupHTML(w), {
-    className: 'walk-popup',
-    autoClose: false,
-    closeOnClick: false,
-    closeButton: false,
-    offset: L.point(0, -10)
-  });
-
-  // Hover shows popup; click goes to the website (like your original)
-  m.on('mouseover', () => showWalk(w.id));
-  m.on('mouseout', () => delayedHide());
-  m.on('click', () => window.open(w.url, '_blank', 'noopener'));
-
-  // Keep popup open while hovering it
-  m.on('popupopen', (e) => {
-    const el = e.popup.getElement();
-    if (!el) return;
-    el.addEventListener('mouseenter', cancelHide);
-    el.addEventListener('mouseleave', delayedHide);
-  });
-
-  markers.set(w.id, m);
-});
-
-/* ========= Popup control ========= */
-function showWalk(id, opts={}){
-  if (!opts.force && Date.now() < hoverLockUntil && id !== currentId) return;
-
-  cancelHide();
-  const marker = markers.get(id);
-  if (!marker) return;
-
-  // Close previous
-  if (currentId && currentId !== id){
-    const prev = markers.get(currentId);
-    prev && prev.closePopup();
-  }
-  currentId = id;
-  marker.openPopup();
-}
-
-function hideWalk(){
-  if (currentId){
-    const m = markers.get(currentId);
-    m && m.closePopup();
-    currentId = null;
-  }
-}
-function delayedHide(){ cancelHide(); hideTimeout = setTimeout(hideWalk, 8000); } // 8s like your original
-function cancelHide(){ if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
-
-/* ========= Sidebar behaviour ========= */
-function toggleRegion(h){
-  h.classList.toggle('collapsed');
-  const list = h.nextElementSibling;
-  if (list && list.tagName === 'UL'){
-    list.style.display = (list.style.display === 'none') ? 'block' : 'none';
-  }
-}
-
-document.querySelectorAll('.walk-list button').forEach(btn=>{
-  const id = btn.dataset.id;
-  const w = WALKS.find(x=>x.id===id);
-  btn.addEventListener('mouseenter', ()=> showWalk(id));
-  btn.addEventListener('mouseleave', ()=> delayedHide());
-  btn.addEventListener('click', ()=>{
-    const m = markers.get(id);
-    if (!m) return;
-    hoverLockUntil = Date.now() + HOVER_LOCK_MS;
-    map.flyTo(m.getLatLng(), Math.max(9, map.getZoom()), { duration: 0.7 });
-    showWalk(id, { force:true });
-  });
-});
-
-/* ========= Search (expand groups with matches) ========= */
-const walkSearch = document.getElementById('walkSearch');
-const regionHeadings = Array.from(document.querySelectorAll('h2.region-heading'));
-const lists = Array.from(document.querySelectorAll('.walk-list'));
-let saved = null, scheduled = false, query = '';
-
-walkSearch.addEventListener('input', ()=>{
-  query = (walkSearch.value || '').trim().toLowerCase();
-  if (scheduled) return;
-  scheduled = true;
-  requestAnimationFrame(applyFilter);
-});
-
-function applyFilter(){
-  scheduled = false;
-  const searching = query.length > 0;
-
-  if (searching && !saved){
-    saved = {
-      ulDisplay: lists.map(ul => ul.style.display || ''),
-      collapsed: regionHeadings.map(h => h.classList.contains('collapsed')),
+    const walkData={
+      epsom:{html:header('We Power On','Epsom, Surrey')+LINK_HTML},
+      canterbury:{html:header('Mindful Steps','Canterbury, Kent')+LINK_HTML},
+      birmingham:{html:header("Men's Brew Walk",'Birmingham, West Midlands')+LINK_HTML},
+      london:{html:header('River Walkers','London')+LINK_HTML},
+      manchester:{html:header('Urban Stride','Manchester')+LINK_HTML},
+      liverpool:{html:header('Dockside Steps','Liverpool')+LINK_HTML},
+      cardiff:{html:header('Walk & Talk Cymru','Cardiff')+LINK_HTML},
+      swansea:{html:header('Coastal Strides','Swansea')+LINK_HTML},
+      bangor_wales:{html:header('Mountain Trekkers','Bangor, Gwynedd')+LINK_HTML},
+      newport_wales:{html:header('Friendship Walk','Newport')+LINK_HTML},
+      wrexham:{html:header('Green Steps','Wrexham')+LINK_HTML},
+      aberystwyth:{html:header('Sea Breeze Walk','Aberystwyth')+LINK_HTML},
+      edinburgh:{html:header('Highland Strides','Edinburgh')+LINK_HTML},
+      glasgow:{html:header('Clyde Walkers','Glasgow')+LINK_HTML},
+      aberdeen_scot:{html:header('Coastal Trekkers','Aberdeen')+LINK_HTML},
+      dundee:{html:header('Riverside Steps','Dundee')+LINK_HTML},
+      inverness:{html:header('Lochside Strides','Inverness')+LINK_HTML},
+      stirling:{html:header('Castle Path Walk','Stirling')+LINK_HTML},
+      belfast:{html:header("Men's Cavehill Walking Club",'Belfast, Cavehill')+LINK_HTML},
+      derry:{html:header('Riverfront Walkers','Derry / Londonderry')+LINK_HTML},
+      lisburn:{html:header('Step Together','Lisburn')+LINK_HTML},
+      newry:{html:header('Hill Trekkers','Newry')+LINK_HTML},
+      armagh:{html:header('Orchard Strides','Armagh')+LINK_HTML},
+      bangor_ni:{html:header('Coastal Breeze Walk','Bangor (NI)')+LINK_HTML}
     };
-  }
+    function header(name, place){ return `
+      <div class="info-header">
+    <img src="${ICON}" class="walk-logo" alt="">
+        <div>
+          <div class="walk-name">${name}</div>
+          <div class="loc-line">${ICON_SVG_PIN}<span>${place}</span></div>
+        </div>
+      </div>`;}
 
-  if (!searching){
-    lists.forEach(ul => ul.querySelectorAll('li').forEach(li => li.style.display = ''));
-    if (saved){
-      lists.forEach((ul,i)=> ul.style.display = saved.ulDisplay[i]);
-      regionHeadings.forEach((h,i)=> h.classList.toggle('collapsed', saved.collapsed[i]));
-      saved = null;
-    }
-    return;
-  }
+    /* State & refs */
+    const infoBox=document.getElementById('info-box');
+    const canvas = document.getElementById('mapCanvas'); // the aspect-locked canvas
+    const markerMap=new Map(Array.from(document.querySelectorAll('.marker')).map(el=>[el.id.replace('marker-',''),el]));
+    let prevVisibleMarker=null, currentWalkId=null, hideTimeout=null, hoverLockUntil=0;
+    const HOVER_LOCK_MS=3000, HIDE_DELAY_MS=1200, LEAVE_GRACE_MS=80;
 
-  lists.forEach((ul, i) => {
-    let matches = 0;
-    ul.querySelectorAll('li').forEach(li => {
-      const ok = (li.textContent || '').toLowerCase().includes(query);
-      li.style.display = ok ? '' : 'none';
-      if (ok) matches++;
+    /* Region toggles */
+    document.querySelectorAll('.region-toggle').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const expanded=btn.getAttribute('aria-expanded')==='true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        const list=document.getElementById(btn.getAttribute('aria-controls'));
+        if(list) list.style.display=expanded?'none':'block';
+      });
+      btn.addEventListener('keydown',e=>{
+        if(e.key==='ArrowDown'){
+          const list=document.getElementById(btn.getAttribute('aria-controls'));
+          const first=list?.querySelector('.walk-btn'); if(first){ first.focus(); e.preventDefault(); }
+        }
+      });
     });
 
-    const heading = regionHeadings[i];
-    if (matches > 0) {
-      ul.style.display = 'block';
-      heading.classList.remove('collapsed');
-    } else {
-      ul.style.display = 'none';
+    /* Search */
+    const searchEl=document.getElementById('walkSearch');
+    const lists=Array.from(document.querySelectorAll('.walk-list'));
+    const regionToggles=Array.from(document.querySelectorAll('.region-toggle'));
+    let saved=null, scheduled=false, pendingQuery='';
+    searchEl.addEventListener('input',()=>{
+      pendingQuery=(searchEl.value||'').trim().toLowerCase();
+      if(scheduled) return; scheduled=true; requestAnimationFrame(applySearch);
+    });
+    function applySearch(){
+      scheduled=false; const q=pendingQuery; const searching=q.length>0;
+      if(searching && !saved){ saved={displays:lists.map(ul=>ul.style.display||''), expanded:regionToggles.map(b=>b.getAttribute('aria-expanded'))}; }
+      if(!searching){
+        lists.forEach(ul=>ul.querySelectorAll('.walk-item').forEach(li=>li.style.display=''));
+        if(saved){ lists.forEach((ul,i)=>ul.style.display=saved.displays[i]); regionToggles.forEach((b,i)=>b.setAttribute('aria-expanded',saved.expanded[i])); saved=null; }
+        return;
+      }
+      lists.forEach((ul,i)=>{
+        let matches=0;
+        ul.querySelectorAll('.walk-item').forEach(li=>{
+          const ok=(li.textContent||'').toLowerCase().includes(q);
+          li.style.display=ok?'':'none'; if(ok) matches++;
+        });
+        const btn=regionToggles[i];
+        if(matches>0){ ul.style.display='block'; btn.setAttribute('aria-expanded','true'); }
+        else{ ul.style.display='none'; }
+      });
     }
-  });
-}
 
-/* ========= Quality-of-life ========= */
-map.on('movestart', cancelHide); // don't auto-hide mid-panning
-map.on('zoomstart', cancelHide);
+    /* List interactions */
+    document.querySelectorAll('.walk-btn').forEach(btn=>{
+      const id=btn.dataset.id;
+      btn.addEventListener('click',()=>{ hoverLockUntil=Date.now()+HOVER_LOCK_MS; showWalk(id,{force:true}); });
+      btn.addEventListener('mouseenter',()=>showWalk(id));
+      btn.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS));
+    });
+
+    /* Marker interactions (desktop hover + mobile tap preview) */
+    const lastTouchTimeById=new Map();
+    const DOUBLE_TAP_MS=500;
+    markerMap.forEach((marker,id)=>{
+      const anchor=marker.parentElement;
+      // Desktop hover
+      anchor.addEventListener('mouseenter',()=>showWalk(id));
+      anchor.addEventListener('mouseleave',()=> delayedHide(LEAVE_GRACE_MS));
+      marker.addEventListener('focus',()=>showWalk(id,{force:true}));
+      marker.addEventListener('blur',()=> delayedHide(HIDE_DELAY_MS));
+
+      // Mobile tap-to-preview: first tap shows popup, second tap opens link
+      anchor.addEventListener('touchstart', (e)=>{
+        const now=Date.now();
+        const last=lastTouchTimeById.get(id)||0;
+        if(now-last>DOUBLE_TAP_MS){
+          e.preventDefault();
+          e.stopPropagation();
+          anchor.dataset.previewed='1';
+          hoverLockUntil=now+HOVER_LOCK_MS;
+          showWalk(id,{force:true});
+          lastTouchTimeById.set(id, now);
+        } else {
+          anchor.dataset.previewed='0';
+        }
+      }, {passive:false});
+      anchor.addEventListener('click', (e)=>{
+        // Suppress the synthetic click immediately after first tap
+        if(anchor.dataset.previewed==='1'){
+          e.preventDefault();
+          anchor.dataset.previewed='0';
+        }
+      });
+      // Clicking anchor otherwise opens target — default behavior
+    });
+
+    infoBox.addEventListener('mouseenter', cancelHide);
+    infoBox.addEventListener('mouseleave', ()=> delayedHide(HIDE_DELAY_MS));
+
+    function showWalk(id,opts={}){
+      if(!opts.force && Date.now()<hoverLockUntil && id!==currentWalkId) return;
+      cancelHide(); currentWalkId=id;
+      const marker=markerMap.get(id);
+      if(prevVisibleMarker && prevVisibleMarker!==marker){ prevVisibleMarker.classList.remove('visible'); }
+      if(marker){ marker.classList.add('visible'); prevVisibleMarker=marker; }
+      infoBox.innerHTML=walkData[id]?.html||''; infoBox.style.display='block';
+      if(marker) positionInfoBoxNearMarker(marker);
+    }
+    function delayedHide(delay=HIDE_DELAY_MS){ cancelHide(); hideTimeout=setTimeout(hideWalk, delay); }
+    function cancelHide(){ if(hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
+    function hideWalk(){ if(prevVisibleMarker){ prevVisibleMarker.classList.remove('visible'); prevVisibleMarker=null; } infoBox.style.display='none'; currentWalkId=null; }
+
+    /* Position popup RELATIVE to the aspect-locked canvas */
+    function positionInfoBoxNearMarker(markerEl){
+      const canvasRect=canvas.getBoundingClientRect();
+      const mr=markerEl.getBoundingClientRect();
+      const prevDisplay=infoBox.style.display;
+      infoBox.style.display='block';
+      const boxW=infoBox.offsetWidth||240, boxH=infoBox.offsetHeight||160;
+
+      // right of marker, vertically centered
+      let left = (mr.right - canvasRect.left) + 12;
+      let top  = (mr.top   - canvasRect.top)  + (mr.height/2) - (boxH/2);
+
+      // if not enough room on right, swap to left
+      if(left + boxW > canvasRect.width - 8){
+        left = (mr.left - canvasRect.left) - boxW - 12;
+      }
+
+      // clamp within canvas bounds
+      const minLeft=8, maxLeft=canvasRect.width - boxW - 8;
+      const minTop =8, maxTop =canvasRect.height - boxH - 8;
+      left=Math.max(minLeft, Math.min(left, maxLeft));
+      top =Math.max(minTop,  Math.min(top,  maxTop));
+
+      infoBox.style.left = left + 'px';
+      infoBox.style.top  = top  + 'px';
+      if(prevDisplay==='none') infoBox.style.display='none';
+    }
+
+    // Reposition on resize/scroll (rAF-throttled)
+    let _raf=null;
+    function scheduleReposition(){
+      if(!currentWalkId) return;
+      if(_raf) return;
+      _raf=requestAnimationFrame(()=>{
+        _raf=null;
+        if(infoBox.style.display==='none') return;
+        const marker=markerMap.get(currentWalkId);
+        if(marker) positionInfoBoxNearMarker(marker);
+      });
+    }
+    window.addEventListener('resize', scheduleReposition, {passive:true});
+    window.addEventListener('scroll', scheduleReposition,  {passive:true});
+
+    /* Alphabetise by town within each region */
+    document.querySelectorAll('.walk-list').forEach(ul=>{
+      const items=[...ul.querySelectorAll('.walk-item')];
+      const key=el=>{
+        const text=(el.textContent||'').trim();
+        const right=text.split(/[-–—]/,2)[1]||text;
+        return (right.split(':',1)[0]||'').trim().toLowerCase();
+      };
+      items.sort((a,b)=>key(a).localeCompare(key(b)));
+      ul.innerHTML=''; items.forEach(li=>ul.appendChild(li));
+    });
 </script>
 </body>
 </html>
