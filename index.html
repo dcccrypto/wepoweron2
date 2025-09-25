@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>We Power On — Customisable UK Map (SVG)</title>
+<title>We Power On — UK Map (Vector, Full UX)</title>
 
-<!-- amCharts 5 (free tier). For commercial use, add your license key. -->
+<!-- amCharts 5 -->
 <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
 <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
 <script src="https://cdn.amcharts.com/lib/5/geodata/ukLow.js"></script>
@@ -13,253 +13,411 @@
 
 <style>
   :root{
-    /* Colours sampled to match your image */
-    --sea: #b8e0e2;              /* background water */
-    --scotland: #c75931;         /* SCOTLAND (rust) */
-    --ni: #f2bc52;               /* NORTHERN IRELAND (yellow) */
-    --wales: #c96a43;            /* WALES (orange) */
-    --south-west: #667652;       /* SOUTH WEST (olive) */
-    --north-west: #5d715e;       /* NORTH WEST (green) */
-    --yorks-humber: #d9683e;     /* YORKS/HUMBER (orange-red) */
-    --north-east: #f0c45b;       /* NORTH EAST (pale yellow) */
-    --west-midlands: #8b4c3a;    /* WEST MIDLANDS (red-brown) */
-    --east-midlands: #2f3d3e;    /* EAST MIDLANDS (very dark slate) */
-    --east-england: #7a865b;     /* ANGLIA / East of England (olive) */
-    --london: #30383a;           /* LONDON (charcoal) */
-    --south-east: #f0b15c;       /* SOUTH EAST (yellow-orange) */
+    /* Palette sampled from your artwork */
+    --sea: #b8e0e2;
+    --scotland: #c75931;
+    --ni: #f2bc52;
+    --wales: #c96a43;
+    --south-west: #667652;
+    --north-west: #5d715e;
+    --yorks-humber: #d9683e;
+    --north-east: #f0c45b;
+    --west-midlands: #8b4c3a;
+    --east-midlands: #2f3d3e;
+    --east-england: #7a865b; /* "Anglia" in your art */
+    --london: #30383a;
+    --south-east: #f0b15c;
 
-    --panel: #fff;
-    --text: #0a0a0a;
-    --accent: #FBBB3D;
+    --panel:#fff; --text:#0a0a0a; --accent:#FBBB3D;
+    --ring: 3px solid rgba(0,0,0,.6);
+    --radius: 10px;
   }
-
   *{ box-sizing:border-box; }
-  html, body { height:100%; margin:0; }
-  body{
-    font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-    color: var(--text);
-    background: var(--panel);
-  }
+  html,body{ height:100%; margin:0; }
+  body{ font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial; color:var(--text); background:var(--panel); }
 
   /* Layout */
-  .wrap{ display:grid; grid-template-columns: 340px 1fr; min-height:100dvh; }
+  .page{ display:grid; grid-template-columns:340px 1fr; min-height:100dvh; }
   .sidebar{ padding:22px 18px; max-height:100dvh; overflow:auto; }
   h1{ margin:0 0 8px; font-size:clamp(26px,4vw,40px); font-weight:800; }
   p{ margin:0 0 10px; }
 
-  #mapWrap{ background:var(--sea); border-left:1px solid #e5e7eb; }
+  .mapWrap{ background:var(--sea); border-left:1px solid #e5e7eb; position:relative; }
   #chartdiv{ width:100%; height:100dvh; }
 
-  /* Search & legend */
+  /* Search and lists */
   .search{ position:sticky; top:8px; background:var(--panel); padding:8px 0 10px; z-index:2; }
-  .search input{
-    width:100%; border:2px solid var(--accent); background:var(--accent);
-    color:#000; border-radius:8px; padding:10px 12px; font-size:15px; outline:none;
-  }
+  .search input{ width:100%; border:2px solid var(--accent); background:var(--accent); color:#000; border-radius:8px; padding:10px 12px; font-size:15px; outline:none; }
   .search input::placeholder{ color:#222; }
-  .legend{ margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; }
-  .chip{ display:flex; align-items:center; gap:8px; font-size:14px; }
-  .swatch{ width:16px; height:16px; border-radius:3px; border:1px solid rgba(0,0,0,.25); }
 
-  /* Popup look */
-  .am5-layer .am5-tooltip{
-    font-size:14px !important;
-    padding:10px 12px !important;
-    border-radius:10px !important;
-    border:1px solid #ccc !important;
-    box-shadow:0 8px 24px rgba(0,0,0,.18) !important;
-    background:#fff !important;
-    color:#000 !important;
+  .region{ margin:14px 0; }
+  .toggle{ width:100%; background:transparent; border:0; border-bottom:1px solid #000; padding:10px 2px 8px; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+  .toggle:focus-visible{ outline:var(--ring); border-radius:6px; }
+  .chev{ color:var(--accent); transition:transform .2s ease; }
+  .toggle[aria-expanded="false"] .chev{ transform:rotate(-90deg); }
+
+  .walk-list{ list-style:none; padding:0; margin:8px 0 0; max-height:140px; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--accent) #fff; }
+  .walk-list::-webkit-scrollbar{ width:8px; } .walk-list::-webkit-scrollbar-thumb{ background:var(--accent); }
+  .walk-item{ margin:6px 0; }
+  .walk-btn{ width:100%; text-align:left; background:transparent; border:0; padding:6px 0; font-size:14px; cursor:pointer; border-radius:6px; }
+  .walk-btn:hover, .walk-btn:focus-visible{ color:var(--accent); outline:var(--ring); background:rgba(251,187,61,.08); padding-left:6px; }
+
+  /* Sticky card (custom popup) */
+  .infoBox{
+    position:absolute; background:#fff; border:1px solid #ccc; border-radius:var(--radius);
+    padding:12px; max-width:260px; z-index:10; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.18);
+    display:none; text-align:left; will-change:left, top;
   }
+  .infoHeader{ display:grid; grid-template-columns:48px 1fr; gap:10px; align-items:center; margin-bottom:6px; }
+  .logo{ width:48px; height:48px; border-radius:6px; object-fit:cover; display:block; }
+  .name{ font-weight:800; line-height:1.2; }
+  .loc{ color:#111; display:flex; align-items:center; gap:6px; margin-top:4px; }
+  .links{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .links a{ color:#000; text-decoration:none; display:inline-flex; gap:8px; align-items:center; }
+  .links a:hover, .links a:focus-visible{ text-decoration:underline; outline:var(--ring); border-radius:6px; }
 
-  @media (max-width: 900px){
-    .wrap{ display:block; }
+  .visually-hidden{ position:absolute!important; width:1px; height:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
+
+  @media (max-width:900px){
+    .page{ display:block; }
     #chartdiv{ height:65dvh; }
   }
 </style>
 </head>
 <body>
-  <main class="wrap">
-    <aside class="sidebar">
+  <main class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Walk directories and search">
       <h1>MEN'S WALK &amp; TALK MAP</h1>
-      <p>Dynamic SVG map of the UK with editable colours and clickable markers. No image drift, fully responsive.</p>
+      <p>Vector UK map with your colours, plus pins and sticky popups. No drift, fully responsive.</p>
 
       <div class="search">
+        <label for="walkSearch" class="visually-hidden">Search walks</label>
         <input id="walkSearch" type="search" placeholder="Search walks… (e.g., London, Cardiff)">
       </div>
 
-      <!-- legend auto-filled by JS -->
-      <div id="legend" class="legend" aria-label="Region colours"></div>
-      <p style="margin-top:14px;font-size:12px;color:#444;">
-        Click a region to zoom. Click a marker to open its link. Press “Home” to reset.
-      </p>
+      <!-- England -->
+      <section class="region" aria-labelledby="eng">
+        <button class="toggle" id="eng" aria-expanded="true" aria-controls="list-eng">England <span class="chev">▼</span></button>
+        <ul class="walk-list" id="list-eng">
+          <li class="walk-item"><button class="walk-btn" data-id="epsom">Surrey – Epsom: We Power On</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="canterbury">Kent – Canterbury: Mindful Steps</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="birmingham">Midlands – Birmingham: Men's Brew Walk</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="london">London – River Walkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="manchester">Manchester – Urban Stride</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="liverpool">Liverpool – Dockside Steps</button></li>
+        </ul>
+      </section>
+
+      <!-- Wales -->
+      <section class="region" aria-labelledby="wal">
+        <button class="toggle" id="wal" aria-expanded="true" aria-controls="list-wal">Wales <span class="chev">▼</span></button>
+        <ul class="walk-list" id="list-wal">
+          <li class="walk-item"><button class="walk-btn" data-id="cardiff">Cardiff – Walk &amp; Talk Cymru</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="swansea">Swansea – Coastal Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="bangor_wales">Bangor – Mountain Trekkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="newport_wales">Newport – Friendship Walk</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="wrexham">Wrexham – Green Steps</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
+        </ul>
+      </section>
+
+      <!-- Scotland -->
+      <section class="region" aria-labelledby="sco">
+        <button class="toggle" id="sco" aria-expanded="true" aria-controls="list-sco">Scotland <span class="chev">▼</span></button>
+        <ul class="walk-list" id="list-sco">
+          <li class="walk-item"><button class="walk-btn" data-id="edinburgh">Edinburgh – Highland Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="glasgow">Glasgow – Clyde Walkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="aberdeen_scot">Aberdeen – Coastal Trekkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="dundee">Dundee – Riverside Steps</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="inverness">Inverness – Lochside Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="stirling">Stirling – Castle Path Walk</button></li>
+        </ul>
+      </section>
+
+      <!-- Northern Ireland -->
+      <section class="region" aria-labelledby="ni">
+        <button class="toggle" id="ni" aria-expanded="true" aria-controls="list-ni">Northern Ireland <span class="chev">▼</span></button>
+        <ul class="walk-list" id="list-ni">
+          <li class="walk-item"><button class="walk-btn" data-id="belfast">Belfast – Cavehill: Men's Cavehill Walking Club</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="derry">Derry – Riverfront Walkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="lisburn">Lisburn – Step Together</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="newry">Newry – Hill Trekkers</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="armagh">Armagh – Orchard Strides</button></li>
+          <li class="walk-item"><button class="walk-btn" data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
+        </ul>
+      </section>
     </aside>
 
-    <section id="mapWrap">
-      <div id="chartdiv" role="application" aria-label="Customisable UK map"></div>
+    <!-- Map -->
+    <section class="mapWrap" aria-label="Interactive map">
+      <div id="chartdiv" role="application" aria-label="UK map with locations"></div>
+      <!-- sticky popup card -->
+      <div id="infoBox" class="infoBox" onmouseenter="cancelHide()" onmouseleave="delayedHide()"></div>
     </section>
   </main>
 
 <script>
-/* =========================
-   Region colour mapping
-   (matches your image)
-   ========================= */
-const REGION_COLORS = {
-  // Countries
-  "Scotland": getComputedStyle(document.documentElement).getPropertyValue("--scotland").trim(),
-  "Wales": getComputedStyle(document.documentElement).getPropertyValue("--wales").trim(),
-  "Northern Ireland": getComputedStyle(document.documentElement).getPropertyValue("--ni").trim(),
-  "England": getComputedStyle(document.documentElement).getPropertyValue("--east-england").trim(), // fallback for any English polygons
+/* ====== CONFIG ====== */
+const ICON_URL = "https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp";
+const SITE_URL = "https://www.wepoweron.co.uk";
+const INSTAGRAM_URL = "https://instagram.com/we_power_on";
 
-  // English regions
-  "South West": getComputedStyle(document.documentElement).getPropertyValue("--south-west").trim(),
-  "South East": getComputedStyle(document.documentElement).getPropertyValue("--south-east").trim(),
-  "London": getComputedStyle(document.documentElement).getPropertyValue("--london").trim(),
-  "East of England": getComputedStyle(document.documentElement).getPropertyValue("--east-england").trim(), // Anglia in your art
-  "East Midlands": getComputedStyle(document.documentElement).getPropertyValue("--east-midlands").trim(),
-  "West Midlands": getComputedStyle(document.documentElement).getPropertyValue("--west-midlands").trim(),
-  "North West": getComputedStyle(document.documentElement).getPropertyValue("--north-west").trim(),
-  "Yorkshire and the Humber": getComputedStyle(document.documentElement).getPropertyValue("--yorks-humber").trim(),
-  "North East": getComputedStyle(document.documentElement).getPropertyValue("--north-east").trim()
-};
-
-/* =========================
-   Walk markers (lat/lng)
-   ========================= */
 const WALKS = [
   // England
-  { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:"https://www.wepoweron.co.uk" },
-  { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:"https://www.wepoweron.co.uk" },
-  { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:"https://www.wepoweron.co.uk" },
-  { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:"https://www.wepoweron.co.uk" },
-  { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:"https://www.wepoweron.co.uk" },
-  { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:"https://www.wepoweron.co.uk" },
-
+  { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:SITE_URL },
+  { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:SITE_URL },
+  { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:SITE_URL },
+  { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:SITE_URL },
+  { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:SITE_URL },
+  { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:SITE_URL },
   // Wales
-  { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:"https://www.wepoweron.co.uk" },
-  { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:"https://www.wepoweron.co.uk" },
-  { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:"https://www.wepoweron.co.uk" },
-  { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:"https://www.wepoweron.co.uk" },
-  { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:"https://www.wepoweron.co.uk" },
-  { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:"https://www.wepoweron.co.uk" },
-
+  { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:SITE_URL },
+  { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:SITE_URL },
+  { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:SITE_URL },
+  { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:SITE_URL },
+  { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:SITE_URL },
+  { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:SITE_URL },
   // Scotland
-  { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:"https://www.wepoweron.co.uk" },
-  { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:"https://www.wepoweron.co.uk" },
-  { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:"https://www.wepoweron.co.uk" },
-  { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:"https://www.wepoweron.co.uk" },
-  { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:"https://www.wepoweron.co.uk" },
-  { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:"https://www.wepoweron.co.uk" },
-
+  { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:SITE_URL },
+  { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:SITE_URL },
+  { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:SITE_URL },
+  { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:SITE_URL },
+  { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:SITE_URL },
+  { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:SITE_URL },
   // Northern Ireland
   { id:"belfast",    name:"Men's Cavehill Walking Club", place:"Belfast, Cavehill", lat:54.597, lng:-5.930, url:"https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" },
-  { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:"https://www.wepoweron.co.uk" },
-  { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:"https://www.wepoweron.co.uk" },
-  { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:"https://www.wepoweron.co.uk" },
-  { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:"https://www.wepoweron.co.uk" },
-  { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:"https://www.wepoweron.co.uk" },
+  { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:SITE_URL },
+  { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:SITE_URL },
+  { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:SITE_URL },
+  { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:SITE_URL },
+  { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
 ];
 
-/* =========================
-   Map initialisation
-   ========================= */
-am5.ready(function() {
-  const root = am5.Root.new("chartdiv");
+/* ===== Region palette (map feature -> colour) ===== */
+const REGION_COLORS = {
+  "Scotland": getCSS("--scotland"),
+  "Wales": getCSS("--wales"),
+  "Northern Ireland": getCSS("--ni"),
+  // English regions
+  "South West": getCSS("--south-west"),
+  "South East": getCSS("--south-east"),
+  "London": getCSS("--london"),
+  "East of England": getCSS("--east-england"),
+  "East Midlands": getCSS("--east-midlands"),
+  "West Midlands": getCSS("--west-midlands"),
+  "North West": getCSS("--north-west"),
+  "Yorkshire and the Humber": getCSS("--yorks-humber"),
+  "North East": getCSS("--north-east"),
+  // Fallback for any stray English polygons
+  "England": getCSS("--east-england")
+};
+
+function getCSS(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+
+/* ===== Map init ===== */
+let chart, polygons, points, root;
+am5.ready(function(){
+  root = am5.Root.new("chartdiv");
   root.setThemes([ am5themes_Animated.new(root) ]);
 
-  const chart = root.container.children.push(am5map.MapChart.new(root, {
-    panX: "translateX",
-    panY: "translateY",
-    wheelY: "zoom",
+  chart = root.container.children.push(am5map.MapChart.new(root, {
+    panX:"translateX", panY:"translateY", wheelY:"zoom",
     projection: am5map.geoMercator()
   }));
 
-  // UK polygons
-  const polygons = chart.series.push(am5map.MapPolygonSeries.new(root, {
-    geoJSON: am5geodata_ukLow,
-    valueField: "value",
-    calculateAggregates: true
+  polygons = chart.series.push(am5map.MapPolygonSeries.new(root, {
+    geoJSON: am5geodata_ukLow, calculateAggregates:true
   }));
 
   polygons.mapPolygons.template.setAll({
-    tooltipText: "{name}",
-    interactive: true,
-    stroke: am5.color(0xffffff),
-    strokeOpacity: 0.9,
-    strokeWidth: 0.5
+    tooltipText:"{name}", interactive:true,
+    stroke: am5.color(0xffffff), strokeOpacity:.9, strokeWidth:.5
   });
 
-  // Fill each feature using our palette
-  polygons.mapPolygons.template.adapters.add("fill", (fill, target) => {
+  polygons.mapPolygons.template.adapters.add("fill", (fill, target)=>{
     const name = target.dataItem.dataContext.name;
-    const color = REGION_COLORS[name];
-    if (color) return am5.color(color);
-    // Some features in ukLow are counties/unitaries. Infer by their "country" parent.
-    const parent = (target.dataItem.dataContext.properties || {}).country;
-    if (parent && REGION_COLORS[parent]) return am5.color(REGION_COLORS[parent]);
-    // Fallback for anything we missed (England counties, small islands)
-    return am5.color(getComputedStyle(document.documentElement).getPropertyValue("--east-england").trim());
+    const props = target.dataItem.dataContext.properties || {};
+    const parent = props.country;
+    const hex = REGION_COLORS[name] || REGION_COLORS[parent] || getCSS("--east-england");
+    return am5.color(hex);
   });
 
-  polygons.mapPolygons.template.states.create("hover", { scale: 1.01, fillOpacity: 0.92 });
+  polygons.mapPolygons.template.states.create("hover", { scale:1.01, fillOpacity:.92 });
+  polygons.mapPolygons.template.events.on("click", (ev)=> chart.zoomToGeoBounds(ev.target.dataItem.get("geoBounds"), 1.8, true));
 
-  // Click-to-zoom behaviour
-  polygons.mapPolygons.template.events.on("click", (ev) => {
-    chart.zoomToGeoBounds(ev.target.dataItem.get("geoBounds"), 1.8, true);
-  });
-
-  // Home button
   const home = chart.children.push(am5.Button.new(root, {
     x: am5.p0, y: am5.p0, centerX: am5.p0, centerY: am5.p0,
-    paddingTop: 8, paddingRight: 10, paddingBottom: 8, paddingLeft: 10,
-    label: am5.Label.new(root, { text: "Home" })
+    paddingTop:8, paddingRight:10, paddingBottom:8, paddingLeft:10,
+    label: am5.Label.new(root, { text:"Home" })
   }));
-  home.events.on("click", () => chart.goHome());
+  home.events.on("click", ()=> chart.goHome());
 
-  // Markers (pins)
-  const points = chart.series.push(am5map.MapPointSeries.new(root, {}));
-
-  // Simple pin graphic (black body, accent stroke to echo your icon)
+  // Markers
+  points = chart.series.push(am5map.MapPointSeries.new(root, {}));
   function makePin(){
     return am5.Graphics.new(root, {
       svgPath: "M14 0c7.7 0 14 6.3 14 14 0 10.4-14 25-14 25S0 24.4 0 14C0 6.3 6.3 0 14 0Z",
       fill: am5.color("#000"),
-      stroke: am5.color(getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()),
+      stroke: am5.color(getCSS("--accent")),
       strokeWidth: 4
     });
   }
 
-  WALKS.forEach(w => {
-    const d = points.pushDataItem({ latitude: w.lat, longitude: w.lng });
-    d.bullets.push(() => am5.Bullet.new(root, { sprite: makePin() }));
-    d.set("tooltipText", `${w.name}\n${w.place}\nClick to open`);
-    d.events.on("click", () => window.open(w.url, "_blank", "noopener"));
+  const markerById = {};
+  WALKS.forEach(w=>{
+    const d = points.pushDataItem({ latitude:w.lat, longitude:w.lng, id:w.id });
+    d.bullets.push(()=> am5.Bullet.new(root, { sprite: makePin() }));
+    d.events.on("pointerover", ()=> showInfo(w));
+    d.events.on("pointerout",  ()=> delayedHide(80));
+    d.events.on("click",       ()=> window.open(w.url, "_blank", "noopener"));
+    markerById[w.id] = d;
   });
 
-  // Search (Enter to fly to first result)
-  const searchEl = document.getElementById("walkSearch");
-  searchEl.addEventListener("keydown", (e)=>{
-    if(e.key !== "Enter") return;
-    const q = searchEl.value.trim().toLowerCase();
-    if(!q) return;
-    const m = WALKS.find(w => (`${w.name} ${w.place}`).toLowerCase().includes(q));
-    if(m){ chart.zoomToGeoPoint({latitude:m.lat, longitude:m.lng}, 8, true); }
+  // Hover the region list buttons
+  document.querySelectorAll('.walk-btn').forEach(btn=>{
+    const id = btn.dataset.id;
+    const walk = WALKS.find(w=>w.id===id);
+    btn.addEventListener('mouseenter', ()=> showInfo(walk));
+    btn.addEventListener('mouseleave', ()=> delayedHide(80));
+    btn.addEventListener('click', ()=>{
+      flyTo(walk);
+      showInfo(walk, {force:true});
+    });
   });
 
-  // Build legend from REGION_COLORS
-  const legend = document.getElementById("legend");
-  Object.entries(REGION_COLORS).forEach(([label, hex])=>{
-    const row = document.createElement("div");
-    row.className = "chip";
-    row.innerHTML = `<span class="swatch" style="background:${hex}"></span><span>${label}</span>`;
-    legend.appendChild(row);
+  // Expanders
+  document.querySelectorAll('.toggle').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const expanded = t.getAttribute('aria-expanded') === 'true';
+      t.setAttribute('aria-expanded', String(!expanded));
+      const list = document.getElementById(t.getAttribute('aria-controls'));
+      list.style.display = expanded ? 'none' : 'block';
+    });
   });
 
-  // Initial view
+  // Search
+  const searchEl = document.getElementById('walkSearch');
+  let saved=null, scheduled=false, q='';
+  const lists = Array.from(document.querySelectorAll('.walk-list'));
+  const toggles = Array.from(document.querySelectorAll('.toggle'));
+
+  searchEl.addEventListener('input', ()=>{
+    q = (searchEl.value||'').trim().toLowerCase();
+    if(scheduled) return; scheduled=true; requestAnimationFrame(applySearch);
+  });
+  function applySearch(){
+    scheduled=false;
+    const searching = q.length>0;
+    if(searching && !saved){
+      saved={displays:lists.map(ul=>ul.style.display||''), expanded:toggles.map(b=>b.getAttribute('aria-expanded'))};
+    }
+    if(!searching){
+      lists.forEach(ul=>ul.querySelectorAll('.walk-item').forEach(li=>li.style.display=''));
+      if(saved){
+        lists.forEach((ul,i)=>ul.style.display=saved.displays[i]);
+        toggles.forEach((b,i)=>b.setAttribute('aria-expanded',saved.expanded[i]));
+        saved=null;
+      }
+      return;
+    }
+    lists.forEach((ul,i)=>{
+      let matches=0;
+      ul.querySelectorAll('.walk-item').forEach(li=>{
+        const ok=(li.textContent||'').toLowerCase().includes(q);
+        li.style.display= ok ? '' : 'none';
+        if(ok) matches++;
+      });
+      const btn=toggles[i];
+      if(matches>0){ ul.style.display='block'; btn.setAttribute('aria-expanded','true'); }
+      else{ ul.style.display='none'; }
+    });
+  }
+
+  // Reposition custom popup on zoom/pan/resize
+  chart.chartContainer.events.on("boundschanged", ()=> scheduleReposition());
+  window.addEventListener('resize', ()=> scheduleReposition(), {passive:true});
+
+  // Nice initial view
   chart.set("zoomStep", 2);
   chart.goHome();
 });
+
+/* ===== Sticky popup card (custom, clickable) ===== */
+const infoBox = document.getElementById('infoBox');
+let current = null, hideTimeout=null, raf=null;
+
+function infoHTML(w){
+  return `
+    <div class="infoHeader">
+      <img class="logo" src="${ICON_URL}" alt="">
+      <div>
+        <div class="name">${w.name}</div>
+        <div class="loc">📍 ${w.place}</div>
+      </div>
+    </div>
+    <div class="links">
+      <a href="${w.url}" target="_blank" rel="noopener">🌐 wepoweron.co.uk</a>
+      <a href="https://instagram.com/we_power_on" target="_blank" rel="noopener">📸 @we_power_on</a>
+    </div>`;
+}
+
+function showInfo(w, opts={}){
+  if(!w) return;
+  cancelHide();
+  current = w;
+  infoBox.innerHTML = infoHTML(w);
+  infoBox.style.display = 'block';
+  positionNear(w);
+}
+
+function delayedHide(ms=1200){
+  cancelHide();
+  hideTimeout = setTimeout(hideInfo, ms);
+}
+function cancelHide(){
+  if(hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; }
+}
+function hideInfo(){
+  infoBox.style.display='none';
+  current = null;
+}
+
+function positionNear(w){
+  if(!chart) return;
+  // Convert geo to pixel in chart coordinates
+  const pt = chart.geoToPoint({ longitude: w.lng, latitude: w.lat });
+  const chartRect = chart.chartContainer._display.toGlobal({x:0,y:0});
+  const boxW = infoBox.offsetWidth || 240;
+  const boxH = infoBox.offsetHeight || 160;
+
+  // Prefer right of marker; center vertically
+  let left = (pt.x - chartRect.x) + 12;
+  let top  = (pt.y - chartRect.y) - (boxH/2);
+
+  // Clamp inside chart div
+  const maxLeft = chart.chartContainer.width() - boxW - 8;
+  const maxTop  = chart.chartContainer.height() - boxH - 8;
+  left = Math.max(8, Math.min(left, maxLeft));
+  top  = Math.max(8, Math.min(top,  maxTop));
+
+  infoBox.style.left = left + "px";
+  infoBox.style.top  = top  + "px";
+}
+function scheduleReposition(){
+  if(!current) return;
+  if(raf) return;
+  raf = requestAnimationFrame(()=>{ raf=null; if(current) positionNear(current); });
+}
+
+/* ===== Helpers ===== */
+function flyTo(w){
+  chart.zoomToGeoPoint({ latitude:w.lat, longitude:w.lng }, 8, true);
+}
+
+/* Expose for inline handlers on the infoBox */
+window.delayedHide = delayedHide;
+window.cancelHide = cancelHide;
 </script>
 </body>
 </html>
