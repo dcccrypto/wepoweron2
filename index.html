@@ -2,23 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>We Power On Map — Proper, Responsive, With Cities & Popups</title>
 
 <!-- Leaflet CSS (ensure proper marker/popup positioning) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <!-- Intro Rust Base (H1 only) -->
-<style>
+  <style>
   @font-face{
     font-family:"Intro Rust Base";
     src:url("https://static.wixstatic.com/ufonts/0737e3_d7be359c419b4134a1683bddb51a5197/woff2/file.woff2") format("woff2");
     font-weight:400; font-style:normal; font-display:swap;
   }
 
-  :root{
-    --top-gap: 24px;
-    --map-bottom-trim: 12px;
+    :root{
+      --top-gap: 24px;
+      --map-bottom-trim: 12px;
     --accent: rgb(251,187,61);
     --text: #000;
   }
@@ -181,6 +181,13 @@
     white-space: nowrap;
   }
 
+  /* Small black dot markers (default state) */
+  .dot-marker, .dot-marker.leaflet-div-icon{
+    background:#000; border:2px solid #fff; width:14px; height:14px;
+    border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25), 0 0 6px rgba(0,0,0,.25);
+    cursor:pointer;
+  }
+
   /* Mobile */
   @media (max-width: 768px) {
     html, body { overflow: auto; height: auto; }
@@ -188,7 +195,7 @@
     .map-wrapper { height: auto; order: 2; margin-left: 0; margin-top: 0; }
     .walk-list-wrapper { order: 1; width: 100%; height: auto; }
   }
-</style>
+  </style>
 
 <!-- Leaflet JS (after CSS import above) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -200,12 +207,12 @@
     <div class="map-header">
       <h1>MEN'S WALK &amp; TALK MAP</h1> <br>
       <p>This map of support shines a light on men's walk and talk groups across the UK.</p>
-      <p>Search below to find a walk near you or click on the map to explore.</p>
+        <p>Search below to find a walk near you or click on the map to explore.</p>
     </div>
 
     <div class="search-box">
       <input type="text" id="walkSearch" placeholder="Search walks..." />
-    </div>
+      </div>
 
     <!-- ENGLAND -->
     <h2 class="region-heading" onclick="toggleRegion(this)">England <span class="dropdown-icon">▼</span></h2>
@@ -216,7 +223,7 @@
       <li><button data-id="london">London – River Walkers</button></li>
       <li><button data-id="manchester">Manchester – Urban Stride</button></li>
       <li><button data-id="liverpool">Liverpool – Dockside Steps</button></li>
-    </ul>
+        </ul>
 
     <!-- WALES -->
     <h2 class="region-heading" onclick="toggleRegion(this)">Wales <span class="dropdown-icon">▼</span></h2>
@@ -227,7 +234,7 @@
       <li><button data-id="newport_wales">Newport – Friendship Walk</button></li>
       <li><button data-id="wrexham">Wrexham – Green Steps</button></li>
       <li><button data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
-    </ul>
+        </ul>
 
     <!-- SCOTLAND -->
     <h2 class="region-heading" onclick="toggleRegion(this)">Scotland <span class="dropdown-icon">▼</span></h2>
@@ -238,7 +245,7 @@
       <li><button data-id="dundee">Dundee – Riverside Steps</button></li>
       <li><button data-id="inverness">Inverness – Lochside Strides</button></li>
       <li><button data-id="stirling">Stirling – Castle Path Walk</button></li>
-    </ul>
+        </ul>
 
     <!-- NORTHERN IRELAND -->
     <h2 class="region-heading" onclick="toggleRegion(this)">Northern Ireland <span class="dropdown-icon">▼</span></h2>
@@ -249,15 +256,15 @@
       <li><button data-id="newry">Newry – Hill Trekkers</button></li>
       <li><button data-id="armagh">Armagh – Orchard Strides</button></li>
       <li><button data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
-    </ul>
+        </ul>
   </div>
 
   <!-- RIGHT: Map -->
   <div class="map-wrapper">
     <div id="map" aria-label="Interactive map with cities and walk locations"></div>
-  </div>
+      </div>
 
-<script>
+  <script>
 /* ========= Data / config ========= */
 const ICON = 'https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp';
 const SITE_URL = 'https://www.wepoweron.co.uk';
@@ -281,36 +288,36 @@ const ICON_SVG_PIN = `
     <circle class="hole" cx="12" cy="9" r="3"></circle>
   </svg>`;
 
-const WALKS = [
-  // England
-  { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:SITE_URL },
-  { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:SITE_URL },
-  { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:SITE_URL },
-  { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:SITE_URL },
-  { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:SITE_URL },
-  { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:SITE_URL },
-  // Wales
-  { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:SITE_URL },
-  { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:SITE_URL },
-  { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:SITE_URL },
-  { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:SITE_URL },
-  { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:SITE_URL },
-  { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:SITE_URL },
-  // Scotland
-  { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:SITE_URL },
-  { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:SITE_URL },
-  { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:SITE_URL },
-  { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:SITE_URL },
-  { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:SITE_URL },
-  { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:SITE_URL },
-  // Northern Ireland
-  { id:"belfast",    name:"Men's Cavehill Walking Club", place:"Belfast, Cavehill", lat:54.597, lng:-5.930, url:"https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" },
-  { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:SITE_URL },
-  { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:SITE_URL },
-  { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:SITE_URL },
-  { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:SITE_URL },
-  { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
-];
+    const WALKS = [
+      // England
+      { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:SITE_URL },
+      { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:SITE_URL },
+      { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:SITE_URL },
+      { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:SITE_URL },
+      { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:SITE_URL },
+      { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:SITE_URL },
+      // Wales
+      { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:SITE_URL },
+      { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:SITE_URL },
+      { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:SITE_URL },
+      { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:SITE_URL },
+      { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:SITE_URL },
+      { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:SITE_URL },
+      // Scotland
+      { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:SITE_URL },
+      { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:SITE_URL },
+      { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:SITE_URL },
+      { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:SITE_URL },
+      { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:SITE_URL },
+      { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:SITE_URL },
+      // Northern Ireland
+      { id:"belfast",    name:"Men's Cavehill Walking Club", place:"Belfast, Cavehill", lat:54.597, lng:-5.930, url:"https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" },
+      { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:SITE_URL },
+      { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:SITE_URL },
+      { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:SITE_URL },
+      { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:SITE_URL },
+      { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
+    ];
 
 /* ========= Build popup HTML ========= */
 function popupHTML(w){
@@ -329,21 +336,19 @@ function popupHTML(w){
 }
 
 /* ========= Leaflet map ========= */
+const UK_BOUNDS = L.latLngBounds(L.latLng(49.5, -11.3), L.latLng(61.2, 2.5));
 const map = L.map('map', {
   zoomControl: true,
-  scrollWheelZoom: true
-}).setView([54.2, -2.7], 6); // UK view
+  scrollWheelZoom: true,
+  maxBounds: UK_BOUNDS,
+  maxBoundsViscosity: 1.0,
+  minZoom: 5
+}).setView(UK_BOUNDS.getCenter(), 6); // UK view
 
-// Labels-only raster overlay so the map is readable without a base image
+// Labels pane (for our region labels only)
 map.createPane('labels');
 map.getPane('labels').style.zIndex = 500;        // above polygons, below markers
 map.getPane('labels').style.pointerEvents = 'none';
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap & CARTO',
-  subdomains: 'abcd',
-  maxZoom: 19,
-  pane: 'labels'
-}).addTo(map);
 
 // Draw UK regions (ITL1/NUTS1) as vectors to avoid image drift
 const regionColors = {
@@ -421,8 +426,12 @@ fetch(NUTS_URL)
     // If regions fail to load, leave the blank sea background; markers still work
   });
 
-// Custom marker icon (slightly smaller for less overlap)
-const walkIcon = L.icon({
+// Icons: default black dot, hover backpack
+const defaultDot = (function(){
+  const size = 14; const half = size/2;
+  return L.divIcon({ className: 'dot-marker', iconSize: [size, size], iconAnchor: [half, half] });
+})();
+const hoverBackpack = L.icon({
   iconUrl: ICON,
   iconSize: [34, 38],
   iconAnchor: [17, 38],
@@ -430,15 +439,15 @@ const walkIcon = L.icon({
 });
 
 // State
-const markers = new Map();
+    const markers = new Map();
 let currentId = null;
 let hideTimeout = null;
 let hoverLockUntil = 0;
 const HOVER_LOCK_MS = 3000;
 
 // Build markers
-WALKS.forEach(w => {
-  const m = L.marker([w.lat, w.lng], { icon: walkIcon, riseOnHover: true })
+    WALKS.forEach(w => {
+  const m = L.marker([w.lat, w.lng], { icon: defaultDot, riseOnHover: true })
     .addTo(map);
 
   m.bindPopup(popupHTML(w), {
@@ -452,8 +461,12 @@ WALKS.forEach(w => {
     offset: L.point(0, -6)
   });
 
-  // Hover shows popup; click opens popup (links inside go to site)
-  m.on('mouseover', () => showWalk(w.id));
+  // Hover shows popup and swaps to backpack; mouseout reverts
+  m.on('mouseover', () => {
+    // raise marker above polygons while active
+    m.setZIndexOffset(1000);
+    showWalk(w.id);
+  });
   m.on('mouseout', () => delayedHide());
   m.on('click', () => showWalk(w.id, { force:true }));
 
@@ -461,41 +474,50 @@ WALKS.forEach(w => {
   m.on('popupopen', (e) => {
     const el = e.popup.getElement();
     if (!el) return;
-    el.addEventListener('mouseenter', cancelHide);
-    el.addEventListener('mouseleave', delayedHide);
+        el.addEventListener('mouseenter', cancelHide);
+        el.addEventListener('mouseleave', delayedHide);
     const img = el.querySelector('img');
     if (img) img.addEventListener('load', () => e.popup.update(), { once:true });
+      });
+
+  m.on('popupclose', () => {
+    m.setIcon(defaultDot);
+    m.setZIndexOffset(0);
   });
 
-  markers.set(w.id, m);
-});
+      markers.set(w.id, m);
+    });
 
 /* ========= Popup control ========= */
-function showWalk(id, opts={}){
-  if (!opts.force && Date.now() < hoverLockUntil && id !== currentId) return;
+    function showWalk(id, opts={}){
+      if (!opts.force && Date.now() < hoverLockUntil && id !== currentId) return;
 
-  cancelHide();
+      cancelHide();
   const marker = markers.get(id);
   if (!marker) return;
 
   // Close previous
   if (currentId && currentId !== id){
     const prev = markers.get(currentId);
-    prev && prev.closePopup();
+    if (prev){
+      prev.setIcon(defaultDot);
+      prev.closePopup();
+    }
   }
   currentId = id;
+  marker.setIcon(hoverBackpack);
   marker.openPopup();
 }
 
 function hideWalk(){
   if (currentId){
     const m = markers.get(currentId);
-    m && m.closePopup();
+    if (m){ m.setIcon(defaultDot); m.closePopup(); }
     currentId = null;
   }
 }
 function delayedHide(){ cancelHide(); hideTimeout = setTimeout(hideWalk, 8000); } // 8s like your original
-function cancelHide(){ if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
+    function cancelHide(){ if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
 
 /* ========= Sidebar behaviour ========= */
 function toggleRegion(h){
@@ -507,18 +529,18 @@ function toggleRegion(h){
 }
 
 document.querySelectorAll('.walk-list button').forEach(btn=>{
-  const id = btn.dataset.id;
-  const w = WALKS.find(x=>x.id===id);
-  btn.addEventListener('mouseenter', ()=> showWalk(id));
-  btn.addEventListener('mouseleave', ()=> delayedHide());
-  btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      const w = WALKS.find(x=>x.id===id);
+      btn.addEventListener('mouseenter', ()=> showWalk(id));
+      btn.addEventListener('mouseleave', ()=> delayedHide());
+      btn.addEventListener('click', ()=>{
     const m = markers.get(id);
     if (!m) return;
-    hoverLockUntil = Date.now() + HOVER_LOCK_MS;
-    map.flyTo(m.getLatLng(), Math.max(9, map.getZoom()), { duration: 0.7 });
-    showWalk(id, { force:true });
-  });
-});
+        hoverLockUntil = Date.now() + HOVER_LOCK_MS;
+        map.flyTo(m.getLatLng(), Math.max(9, map.getZoom()), { duration: 0.7 });
+        showWalk(id, { force:true });
+      });
+    });
 
 /* ========= Search (expand groups with matches) ========= */
 const walkSearch = document.getElementById('walkSearch');
@@ -551,8 +573,8 @@ function applyFilter(){
       regionHeadings.forEach((h,i)=> h.classList.toggle('collapsed', saved.collapsed[i]));
       saved = null;
     }
-    return;
-  }
+        return;
+      }
 
   lists.forEach((ul, i) => {
     let matches = 0;
@@ -575,6 +597,6 @@ function applyFilter(){
 /* ========= Quality-of-life ========= */
 map.on('movestart', cancelHide); // don't auto-hide mid-panning
 map.on('zoomstart', cancelHide);
-</script>
+  </script>
 </body>
 </html>
