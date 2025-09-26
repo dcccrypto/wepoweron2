@@ -2,20 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>We Power On — Men's Walk & Talk Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>We Power On Map — Proper, Responsive, With Cities & Popups</title>
+
+<!-- Leaflet CSS (ensure proper marker/popup positioning) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <!-- Intro Rust Base (H1 only) -->
-  <style>
+<style>
   @font-face{
     font-family:"Intro Rust Base";
     src:url("https://static.wixstatic.com/ufonts/0737e3_d7be359c419b4134a1683bddb51a5197/woff2/file.woff2") format("woff2");
     font-weight:400; font-style:normal; font-display:swap;
   }
 
-    :root{
-      --top-gap: 24px;
-      --map-bottom-trim: 12px;
+  :root{
+    --top-gap: 24px;
+    --map-bottom-trim: 12px;
     --accent: rgb(251,187,61);
     --text: #000;
   }
@@ -136,19 +139,6 @@
   }
   #map { width: 100%; height: 100%; }
 
-  /* Region labels (placed as Leaflet divIcons) */
-  .region-label{
-    font-weight: 800;
-    font-size: 12px;
-    letter-spacing: .4px;
-    color:#fff;
-    text-transform: uppercase;
-    text-shadow: 0 1px 2px rgba(0,0,0,.45), 0 0 2px rgba(0,0,0,.25);
-    white-space: nowrap;
-    user-select: none;
-    pointer-events: none;
-  }
-
   /* Leaflet default styles */
   @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
 
@@ -181,6 +171,16 @@
   .walk-popup .links a { text-decoration:none; color:#000; display:inline-flex; align-items:center; gap:8px; }
   .walk-popup .links a:hover { text-decoration: underline; }
 
+  /* Region labels (vector text over polygons) */
+  .region-label {
+    pointer-events: none;
+    font-weight: 800;
+    font-size: 13px;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6), 0 0 2px rgba(0,0,0,.6);
+    white-space: nowrap;
+  }
+
   /* Mobile */
   @media (max-width: 768px) {
     html, body { overflow: auto; height: auto; }
@@ -188,7 +188,7 @@
     .map-wrapper { height: auto; order: 2; margin-left: 0; margin-top: 0; }
     .walk-list-wrapper { order: 1; width: 100%; height: auto; }
   }
-  </style>
+</style>
 
 <!-- Leaflet JS (after CSS import above) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -200,12 +200,12 @@
     <div class="map-header">
       <h1>MEN'S WALK &amp; TALK MAP</h1> <br>
       <p>This map of support shines a light on men's walk and talk groups across the UK.</p>
-        <p>Search below to find a walk near you or click on the map to explore.</p>
+      <p>Search below to find a walk near you or click on the map to explore.</p>
     </div>
 
     <div class="search-box">
       <input type="text" id="walkSearch" placeholder="Search walks..." />
-      </div>
+    </div>
 
     <!-- ENGLAND -->
     <h2 class="region-heading" onclick="toggleRegion(this)">England <span class="dropdown-icon">▼</span></h2>
@@ -216,7 +216,7 @@
       <li><button data-id="london">London – River Walkers</button></li>
       <li><button data-id="manchester">Manchester – Urban Stride</button></li>
       <li><button data-id="liverpool">Liverpool – Dockside Steps</button></li>
-        </ul>
+    </ul>
 
     <!-- WALES -->
     <h2 class="region-heading" onclick="toggleRegion(this)">Wales <span class="dropdown-icon">▼</span></h2>
@@ -227,7 +227,7 @@
       <li><button data-id="newport_wales">Newport – Friendship Walk</button></li>
       <li><button data-id="wrexham">Wrexham – Green Steps</button></li>
       <li><button data-id="aberystwyth">Aberystwyth – Sea Breeze Walk</button></li>
-        </ul>
+    </ul>
 
     <!-- SCOTLAND -->
     <h2 class="region-heading" onclick="toggleRegion(this)">Scotland <span class="dropdown-icon">▼</span></h2>
@@ -238,7 +238,7 @@
       <li><button data-id="dundee">Dundee – Riverside Steps</button></li>
       <li><button data-id="inverness">Inverness – Lochside Strides</button></li>
       <li><button data-id="stirling">Stirling – Castle Path Walk</button></li>
-        </ul>
+    </ul>
 
     <!-- NORTHERN IRELAND -->
     <h2 class="region-heading" onclick="toggleRegion(this)">Northern Ireland <span class="dropdown-icon">▼</span></h2>
@@ -249,15 +249,15 @@
       <li><button data-id="newry">Newry – Hill Trekkers</button></li>
       <li><button data-id="armagh">Armagh – Orchard Strides</button></li>
       <li><button data-id="bangor_ni">Bangor – Coastal Breeze Walk</button></li>
-        </ul>
+    </ul>
   </div>
 
   <!-- RIGHT: Map -->
   <div class="map-wrapper">
     <div id="map" aria-label="Interactive map with cities and walk locations"></div>
-      </div>
+  </div>
 
-  <script>
+<script>
 /* ========= Data / config ========= */
 const ICON = 'https://static.wixstatic.com/media/0115fe_e7001c4e539a47aa96028d8e89cf3ee8~mv2.webp';
 const SITE_URL = 'https://www.wepoweron.co.uk';
@@ -281,36 +281,36 @@ const ICON_SVG_PIN = `
     <circle class="hole" cx="12" cy="9" r="3"></circle>
   </svg>`;
 
-    const WALKS = [
-      // England
-      { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:SITE_URL },
-      { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:SITE_URL },
-      { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:SITE_URL },
-      { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:SITE_URL },
-      { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:SITE_URL },
-      { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:SITE_URL },
-      // Wales
-      { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:SITE_URL },
-      { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:SITE_URL },
-      { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:SITE_URL },
-      { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:SITE_URL },
-      { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:SITE_URL },
-      { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:SITE_URL },
-      // Scotland
-      { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:SITE_URL },
-      { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:SITE_URL },
-      { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:SITE_URL },
-      { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:SITE_URL },
-      { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:SITE_URL },
-      { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:SITE_URL },
-      // Northern Ireland
-      { id:"belfast",    name:"Men's Cavehill Walking Club", place:"Belfast, Cavehill", lat:54.597, lng:-5.930, url:"https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" },
-      { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:SITE_URL },
-      { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:SITE_URL },
-      { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:SITE_URL },
-      { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:SITE_URL },
-      { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
-    ];
+const WALKS = [
+  // England
+  { id:"epsom",      name:"We Power On",           place:"Epsom, Surrey",     lat:51.334, lng:-0.266, url:SITE_URL },
+  { id:"canterbury", name:"Mindful Steps",         place:"Canterbury, Kent",  lat:51.280, lng: 1.080, url:SITE_URL },
+  { id:"birmingham", name:"Men's Brew Walk",       place:"Birmingham, West Midlands", lat:52.486, lng:-1.890, url:SITE_URL },
+  { id:"london",     name:"River Walkers",         place:"London",            lat:51.507, lng:-0.128, url:SITE_URL },
+  { id:"manchester", name:"Urban Stride",          place:"Manchester",        lat:53.480, lng:-2.242, url:SITE_URL },
+  { id:"liverpool",  name:"Dockside Steps",        place:"Liverpool",         lat:53.407, lng:-2.991, url:SITE_URL },
+  // Wales
+  { id:"cardiff",    name:"Walk & Talk Cymru",     place:"Cardiff",           lat:51.481, lng:-3.179, url:SITE_URL },
+  { id:"swansea",    name:"Coastal Strides",       place:"Swansea",           lat:51.621, lng:-3.943, url:SITE_URL },
+  { id:"bangor_wales", name:"Mountain Trekkers",   place:"Bangor, Gwynedd",   lat:53.230, lng:-4.130, url:SITE_URL },
+  { id:"newport_wales", name:"Friendship Walk",    place:"Newport",           lat:51.586, lng:-3.000, url:SITE_URL },
+  { id:"wrexham",    name:"Green Steps",           place:"Wrexham",           lat:53.046, lng:-2.993, url:SITE_URL },
+  { id:"aberystwyth",name:"Sea Breeze Walk",       place:"Aberystwyth",       lat:52.415, lng:-4.082, url:SITE_URL },
+  // Scotland
+  { id:"edinburgh",  name:"Highland Strides",      place:"Edinburgh",         lat:55.953, lng:-3.188, url:SITE_URL },
+  { id:"glasgow",    name:"Clyde Walkers",         place:"Glasgow",           lat:55.864, lng:-4.251, url:SITE_URL },
+  { id:"aberdeen_scot", name:"Coastal Trekkers",   place:"Aberdeen",          lat:57.149, lng:-2.094, url:SITE_URL },
+  { id:"dundee",     name:"Riverside Steps",       place:"Dundee",            lat:56.462, lng:-2.970, url:SITE_URL },
+  { id:"inverness",  name:"Lochside Strides",      place:"Inverness",         lat:57.477, lng:-4.224, url:SITE_URL },
+  { id:"stirling",   name:"Castle Path Walk",      place:"Stirling",          lat:56.116, lng:-3.936, url:SITE_URL },
+  // Northern Ireland
+  { id:"belfast",    name:"Men's Cavehill Walking Club", place:"Belfast, Cavehill", lat:54.597, lng:-5.930, url:"https://www.facebook.com/p/Mens-Cavehill-Walking-Club-100086241889121/?locale=en_GB" },
+  { id:"derry",      name:"Riverfront Walkers",    place:"Derry / Londonderry", lat:54.997, lng:-7.309, url:SITE_URL },
+  { id:"lisburn",    name:"Step Together",         place:"Lisburn",            lat:54.514, lng:-6.036, url:SITE_URL },
+  { id:"newry",      name:"Hill Trekkers",         place:"Newry",              lat:54.175, lng:-6.339, url:SITE_URL },
+  { id:"armagh",     name:"Orchard Strides",       place:"Armagh",             lat:54.350, lng:-6.650, url:SITE_URL },
+  { id:"bangor_ni",  name:"Coastal Breeze Walk",   place:"Bangor (NI)",        lat:54.660, lng:-5.670, url:SITE_URL },
+];
 
 /* ========= Build popup HTML ========= */
 function popupHTML(w){
@@ -329,81 +329,152 @@ function popupHTML(w){
 }
 
 /* ========= Leaflet map ========= */
-// UK geographic bounds used to anchor the georeferenced overlay
-const UK_BOUNDS = L.latLngBounds([[49.84, -8.65],[60.95, 2.10]]);
-
 const map = L.map('map', {
   zoomControl: true,
-  scrollWheelZoom: true,
-  maxBounds: UK_BOUNDS.pad(0.25),
-  maxBoundsViscosity: 0.2
-});
-map.fitBounds(UK_BOUNDS);
+  scrollWheelZoom: true
+}).setView([54.2, -2.7], 6); // UK view
 
-// Nice labelled basemap so cities appear
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OSM & CARTO',
+// Labels-only raster overlay so the map is readable without a base image
+map.createPane('labels');
+map.getPane('labels').style.zIndex = 500;        // above polygons, below markers
+map.getPane('labels').style.pointerEvents = 'none';
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap & CARTO',
   subdomains: 'abcd',
-  maxZoom: 19
+  maxZoom: 19,
+  pane: 'labels'
+}).addTo(map);
+
+// Draw UK regions (ITL1/NUTS1) as vectors to avoid image drift
+const regionColors = {
+  // Scotland / Nations
+  UKM: '#D45A28', // Scotland
+  UKN: '#F5BC53', // Northern Ireland
+  UKL: '#CF4230', // Wales
+  // England regions
+  UKC: '#F5BC53', // North East
+  UKD: '#6E7F5A', // North West
+  UKE: '#D6562A', // Yorkshire & Humber
+  UKF: '#2F3A37', // East Midlands
+  UKG: '#B1513A', // West Midlands
+  UKH: '#6E7F5A', // East of England (Anglia)
+  UKI: '#2B363B', // London
+  UKJ: '#F5BC53', // South East
+  UKK: '#5C6F4E'  // South West
+};
+
+let regionLayer = null;
+const prettyNames = {
+  UKM: 'Scotland',
+  UKN: 'Northern Ireland',
+  UKL: 'Wales',
+  UKC: 'North East',
+  UKD: 'North West',
+  UKE: 'Yorkshire & Humber',
+  UKF: 'East Midlands',
+  UKG: 'West Midlands',
+  UKH: 'East of England',
+  UKI: 'London',
+  UKJ: 'South East',
+  UKK: 'South West'
+};
+const regionLabels = L.layerGroup().addTo(map);
+const NUTS_URL = 'https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_10M_2021_4326.geojson';
+
+fetch(NUTS_URL)
+  .then(r => r.json())
+  .then(geo => {
+    // Filter to UK, level 1 regions
+    const feats = (geo.features || []).filter(f =>
+      f.properties && f.properties.CNTR_CODE === 'UK' && (f.properties.LEVL_CODE === 1 || f.properties.LEVL_CODE === '1')
+    );
+
+    regionLayer = L.geoJSON(feats, {
+      style: f => ({
+        color: '#ffffff',
+        weight: 1,
+        fillColor: regionColors[f.properties.NUTS_ID] || '#d3d3d3',
+        fillOpacity: 0.95
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.on({
+          mouseover: e => e.target.setStyle({ weight: 2 }),
+          mouseout: e => regionLayer.resetStyle(e.target)
+        });
+        // Add a label at the bounds center
+        const id = feature.properties.NUTS_ID;
+        const name = prettyNames[id] || feature.properties.NUTS_NAME || '';
+        try{
+          const c = layer.getBounds().getCenter();
+          L.marker(c, {
+            icon: L.divIcon({ className: 'region-label', html: name }) ,
+            pane: 'labels'
+          }).addTo(regionLabels);
+        } catch(e) {}
+      }
     }).addTo(map);
 
-// Georeferenced overlay of the reference UK regions image so the colours match your design
-// This keeps perfect alignment at all zoom levels without any drifting
-L.imageOverlay(
-  'https://static.wixstatic.com/media/0115fe_de5d106d4b3b46579b02adc51d9131d4~mv2.webp',
-  UK_BOUNDS,
-  { opacity: 1, interactive: false }
-).addTo(map);
+    // Fit initial view to UK regions
+    try { map.fitBounds(regionLayer.getBounds(), { padding: [20,20] }); } catch(e) {}
+  })
+  .catch(()=>{
+    // If regions fail to load, leave the blank sea background; markers still work
+  });
 
-// Custom marker icon
+// Custom marker icon (slightly smaller for less overlap)
 const walkIcon = L.icon({
   iconUrl: ICON,
-  iconSize: [42, 48],
-  iconAnchor: [21, 48],
-  popupAnchor: [0, -50]
+  iconSize: [34, 38],
+  iconAnchor: [17, 38],
+  popupAnchor: [0, -44]
 });
 
 // State
-    const markers = new Map();
+const markers = new Map();
 let currentId = null;
 let hideTimeout = null;
 let hoverLockUntil = 0;
 const HOVER_LOCK_MS = 3000;
 
 // Build markers
-    WALKS.forEach(w => {
+WALKS.forEach(w => {
   const m = L.marker([w.lat, w.lng], { icon: walkIcon, riseOnHover: true })
     .addTo(map);
 
   m.bindPopup(popupHTML(w), {
     className: 'walk-popup',
-    autoClose: false,
-    closeOnClick: false,
-    closeButton: false,
-    offset: L.point(0, -10)
+    maxWidth: 260,
+    autoClose: true,
+    closeOnClick: true,
+    closeButton: true,
+    keepInView: true,
+    autoPan: true,
+    offset: L.point(0, -6)
   });
 
-  // Hover shows popup on desktop; click/tap opens popup on all devices
-      m.on('mouseover', () => showWalk(w.id));
-      m.on('mouseout', () => delayedHide());
+  // Hover shows popup; click opens popup (links inside go to site)
+  m.on('mouseover', () => showWalk(w.id));
+  m.on('mouseout', () => delayedHide());
   m.on('click', () => showWalk(w.id, { force:true }));
 
   // Keep popup open while hovering it
-      m.on('popupopen', (e) => {
+  m.on('popupopen', (e) => {
     const el = e.popup.getElement();
     if (!el) return;
-        el.addEventListener('mouseenter', cancelHide);
-        el.addEventListener('mouseleave', delayedHide);
-      });
+    el.addEventListener('mouseenter', cancelHide);
+    el.addEventListener('mouseleave', delayedHide);
+    const img = el.querySelector('img');
+    if (img) img.addEventListener('load', () => e.popup.update(), { once:true });
+  });
 
-      markers.set(w.id, m);
-    });
+  markers.set(w.id, m);
+});
 
 /* ========= Popup control ========= */
-    function showWalk(id, opts={}){
-      if (!opts.force && Date.now() < hoverLockUntil && id !== currentId) return;
+function showWalk(id, opts={}){
+  if (!opts.force && Date.now() < hoverLockUntil && id !== currentId) return;
 
-      cancelHide();
+  cancelHide();
   const marker = markers.get(id);
   if (!marker) return;
 
@@ -423,17 +494,8 @@ function hideWalk(){
     currentId = null;
   }
 }
-function delayedHide(){ cancelHide(); hideTimeout = setTimeout(hideWalk, 8000); }
-    function cancelHide(){ if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
-
-// Close by clicking the map background or pressing Escape
-map.on('click', (e)=>{
-  // Ignore clicks that originate from markers/popups
-  const t = e.originalEvent?.target;
-  if (t && (t.closest?.('.leaflet-marker-icon') || t.closest?.('.leaflet-popup'))) return;
-  hideWalk();
-});
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') hideWalk(); }, {passive:true});
+function delayedHide(){ cancelHide(); hideTimeout = setTimeout(hideWalk, 8000); } // 8s like your original
+function cancelHide(){ if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout=null; } }
 
 /* ========= Sidebar behaviour ========= */
 function toggleRegion(h){
@@ -445,18 +507,18 @@ function toggleRegion(h){
 }
 
 document.querySelectorAll('.walk-list button').forEach(btn=>{
-      const id = btn.dataset.id;
-      const w = WALKS.find(x=>x.id===id);
-      btn.addEventListener('mouseenter', ()=> showWalk(id));
-      btn.addEventListener('mouseleave', ()=> delayedHide());
-      btn.addEventListener('click', ()=>{
+  const id = btn.dataset.id;
+  const w = WALKS.find(x=>x.id===id);
+  btn.addEventListener('mouseenter', ()=> showWalk(id));
+  btn.addEventListener('mouseleave', ()=> delayedHide());
+  btn.addEventListener('click', ()=>{
     const m = markers.get(id);
     if (!m) return;
-        hoverLockUntil = Date.now() + HOVER_LOCK_MS;
-        map.flyTo(m.getLatLng(), Math.max(9, map.getZoom()), { duration: 0.7 });
-        showWalk(id, { force:true });
-      });
-    });
+    hoverLockUntil = Date.now() + HOVER_LOCK_MS;
+    map.flyTo(m.getLatLng(), Math.max(9, map.getZoom()), { duration: 0.7 });
+    showWalk(id, { force:true });
+  });
+});
 
 /* ========= Search (expand groups with matches) ========= */
 const walkSearch = document.getElementById('walkSearch');
@@ -489,8 +551,8 @@ function applyFilter(){
       regionHeadings.forEach((h,i)=> h.classList.toggle('collapsed', saved.collapsed[i]));
       saved = null;
     }
-        return;
-      }
+    return;
+  }
 
   lists.forEach((ul, i) => {
     let matches = 0;
@@ -513,31 +575,6 @@ function applyFilter(){
 /* ========= Quality-of-life ========= */
 map.on('movestart', cancelHide); // don't auto-hide mid-panning
 map.on('zoomstart', cancelHide);
-
-/* ========= Region labels (approximate centroids) ========= */
-const REGION_LABELS = [
-  // Nations
-  { name:'SCOTLAND',         lat:56.8,  lng:-4.2 },
-  { name:'WALES',            lat:52.4,  lng:-3.7 },
-  { name:'NORTHERN IRELAND', lat:54.7,  lng:-6.7 },
-  // English regions
-  { name:'NORTH EAST',   lat:54.9, lng:-1.6 },
-  { name:'NORTH WEST',   lat:53.9, lng:-2.6 },
-  { name:'YORKS / HUMBER', lat:53.9, lng:-1.0 },
-  { name:'EAST MIDLANDS', lat:52.9, lng:-1.2 },
-  { name:'WEST MIDLANDS', lat:52.5, lng:-2.1 },
-  { name:'EAST OF ENGLAND', lat:52.1, lng:0.5 },
-  { name:'SOUTH EAST',   lat:51.2, lng:-0.9 },
-  { name:'SOUTH WEST',   lat:50.9, lng:-3.7 },
-  { name:'LONDON',       lat:51.5, lng:-0.1 },
-];
-
-REGION_LABELS.forEach(r=>{
-  L.marker([r.lat, r.lng], {
-    interactive:false,
-    icon: L.divIcon({ className:'region-label', html:r.name })
-  }).addTo(map);
-});
-  </script>
+</script>
 </body>
 </html>
